@@ -4,7 +4,7 @@ const WALLVERSE_PUBLIC_CONFIG = {
   r2PublicBaseUrl: 'https://images.wallverse.win',
 };
 
-const SELECT = 'id,title,thumbnail_url,category,quality,likes_count,downloads_count,views_count,is_weekly,is_featured,storage_provider,thumbnail_storage_key,profiles!wallpapers_user_id_fkey(username,avatar_url),wallpaper_tags(tags(name))';
+const SELECT = 'id,user_id,title,description,thumbnail_url,category,quality,width,height,file_size,likes_count,downloads_count,views_count,is_ai,is_suggestive,is_weekly,is_featured,polished_until,created_at,storage_provider,thumbnail_storage_key,profiles!wallpapers_user_id_fkey(username,avatar_url),wallpaper_tags(tags(name))';
 const SPOTLIGHT_SELECT = 'id,title,image_url,thumbnail_url,category,quality,is_weekly,is_featured,storage_provider,thumbnail_storage_key,hd_storage_key,profiles!wallpapers_user_id_fkey(username,avatar_url),wallpaper_tags(tags(name))';
 const FEATURED_SELECT = SELECT;
 const CREATOR_STATS_SELECT = 'id,quality,likes_count,downloads_count,views_count,is_featured,is_weekly';
@@ -16,6 +16,9 @@ const apiHeaders = {
 };
 
 window.WALLVERSE_PUBLIC_CONFIG = WALLVERSE_PUBLIC_CONFIG;
+if (!window.WallverseSupabase && window.supabase?.createClient) {
+  window.WallverseSupabase = window.supabase.createClient(WALLVERSE_PUBLIC_CONFIG.supabaseUrl, WALLVERSE_PUBLIC_CONFIG.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+}
 
 const grid = document.getElementById('wallpaper-grid');
 const status = document.getElementById('feed-status');
@@ -24,6 +27,12 @@ const spotlightCard = document.getElementById('spotlight-card');
 let offset = 0;
 let cardIndex = 0;
 let idleObserver;
+let loadedWallpapers = [];
+let feedSort = 'popular';
+let lastFeedPageFull = true;
+let feedShowSuggestive = false;
+let feedUser = null;
+let feedReady = false;
 
 function registerIdleCard(card) {
   if (!('IntersectionObserver' in window)) return;
@@ -33,6 +42,23 @@ function registerIdleCard(card) {
     }, { rootMargin: '80px 0px', threshold: 0.15 });
   }
   idleObserver.observe(card);
+}
+
+function enablePublicCardMotion(card) {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || window.matchMedia('(pointer: coarse)').matches) return;
+  card.addEventListener('pointermove', (event) => {
+    const rect = card.getBoundingClientRect();
+    const x = (event.clientX - rect.left) / rect.width;
+    const y = (event.clientY - rect.top) / rect.height;
+    card.style.setProperty('--card-rx', `${(0.5 - y) * 8}deg`);
+    card.style.setProperty('--card-ry', `${(x - 0.5) * 10}deg`);
+    card.style.setProperty('--light-x', `${x * 100}%`);
+    card.style.setProperty('--light-y', `${y * 100}%`);
+  });
+  card.addEventListener('pointerleave', () => {
+    card.style.setProperty('--card-rx', '0deg'); card.style.setProperty('--card-ry', '0deg');
+    card.style.setProperty('--light-x', '28%'); card.style.setProperty('--light-y', '18%');
+  });
 }
 
 function r2Url(key) {
@@ -122,8 +148,10 @@ function creatorNode(profile) {
 function renderCard(wallpaper) {
   const card = document.createElement('article');
   const tier = publicCardTier(wallpaper);
-  card.className = `collectible-card collectible-card--public tier--${tier}`;
-  card.setAttribute('aria-label', `${wallpaper.title || 'Untitled card'}, ${tier} rarity`);
+  const polished = wallpaper.polished_until && new Date(wallpaper.polished_until) > new Date();
+  card.className = `collectible-card collectible-card--public tier--${tier}${polished ? ' is-polished' : ''}`;
+  card.setAttribute('role', 'button'); card.tabIndex = 0;
+  card.setAttribute('aria-label', `Open ${wallpaper.title || 'Untitled card'}, ${tier} rarity${polished ? ', polished' : ''}`);
   card.style.setProperty('--idle-delay', `${(cardIndex++ % 9) * -1.1}s`);
   const imageWrap = document.createElement('div');
   imageWrap.className = 'collectible-card__media';
@@ -169,8 +197,67 @@ function renderCard(wallpaper) {
   info.append(stats);
   imageWrap.append(surface, shine, badges, info);
   card.append(imageWrap);
+  const inspect = () => window.dispatchEvent(new CustomEvent('wallverse:inspect', { detail: { wallpaper } }));
+  card.addEventListener('click', inspect);
+  card.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); inspect(); } });
   registerIdleCard(card);
+  enablePublicCardMotion(card);
   return card;
+}
+
+const feedTierRank = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4, mythic: 5 };
+function updateFeedSortControls() {
+  const popular = document.getElementById('feed-sort-popular'); const recent = document.getElementById('feed-sort-recent');
+  popular.classList.toggle('is-active', feedSort === 'popular'); popular.setAttribute('aria-pressed', String(feedSort === 'popular'));
+  recent.classList.toggle('is-active', feedSort === 'recent'); recent.setAttribute('aria-pressed', String(feedSort === 'recent'));
+}
+function renderFeed() {
+  const query = document.getElementById('feed-search')?.value.trim().toLocaleLowerCase() || '';
+  const rarity = document.getElementById('feed-rarity')?.value || 'all';
+  const quality = document.getElementById('feed-quality')?.value || 'all';
+  const filtered = loadedWallpapers.filter((wallpaper) => {
+    const searchable = [wallpaper.title, wallpaper.category, wallpaper.profiles?.username, ...tagsFor(wallpaper)].filter(Boolean).join(' ').toLocaleLowerCase();
+    return (!query || searchable.includes(query)) && (rarity === 'all' || publicCardTier(wallpaper) === rarity) && (quality === 'all' || String(wallpaper.quality || '').toLocaleLowerCase() === quality);
+  });
+  filtered.sort((left, right) => {
+    if (feedSort === 'recent') return new Date(right.created_at || 0) - new Date(left.created_at || 0);
+    return feedTierRank[publicCardTier(right)] - feedTierRank[publicCardTier(left)] || publicCardScore(right) - publicCardScore(left) || new Date(right.created_at || 0) - new Date(left.created_at || 0);
+  });
+  idleObserver?.disconnect();
+  grid.replaceChildren(...filtered.map(renderCard));
+  status.textContent = filtered.length ? `Showing ${filtered.length} of ${loadedWallpapers.length} loaded cards` : 'No loaded cards match these filters.';
+  status.hidden = false;
+  loadMore.hidden = !lastFeedPageFull;
+}
+
+function feedSuggestiveKey(userId) { return `wallverse-show-suggestive:${userId}`; }
+function savedFeedSuggestive(userId) {
+  try { return window.localStorage.getItem(feedSuggestiveKey(userId)) === 'true'; } catch { return false; }
+}
+function saveFeedSuggestive(userId, value) {
+  try { window.localStorage.setItem(feedSuggestiveKey(userId), String(value)); } catch { /* Storage can be unavailable in private contexts. */ }
+}
+function renderFeedSuggestiveControl() {
+  const control = document.getElementById('feed-suggestive'); if (!control) return;
+  control.disabled = !feedUser; control.checked = Boolean(feedUser && feedShowSuggestive);
+  control.closest('label').title = feedUser ? 'Include suggestive wallpapers' : 'Sign in to control suggestive content';
+}
+async function reloadFeed() {
+  offset = 0; loadedWallpapers = []; lastFeedPageFull = true; grid.replaceChildren(); grid.setAttribute('aria-busy', 'true');
+  status.textContent = 'Loading wallpapers…'; status.hidden = false; await loadPage();
+}
+async function initializeFeedAuth() {
+  const supabaseApi = window.supabase;
+  if (!supabaseApi?.createClient) { renderFeedSuggestiveControl(); return; }
+  const authClient = window.WallverseSupabase || supabaseApi.createClient(WALLVERSE_PUBLIC_CONFIG.supabaseUrl, WALLVERSE_PUBLIC_CONFIG.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+  try { const { data } = await authClient.auth.getUser(); feedUser = data.user || null; } catch { feedUser = null; }
+  feedShowSuggestive = feedUser ? savedFeedSuggestive(feedUser.id) : false; renderFeedSuggestiveControl();
+  authClient.auth.onAuthStateChange((_event, session) => {
+    const nextUser = session?.user || null; const nextSuggestive = nextUser ? savedFeedSuggestive(nextUser.id) : false;
+    const changed = nextUser?.id !== feedUser?.id || nextSuggestive !== feedShowSuggestive;
+    feedUser = nextUser; feedShowSuggestive = nextSuggestive; renderFeedSuggestiveControl();
+    if (feedReady && changed) reloadFeed().catch((error) => console.error(error));
+  });
 }
 
 function renderSpotlight(wallpaper, weekly) {
@@ -193,7 +280,7 @@ async function loadSpotlight() {
   const base = { status: 'eq.approved', is_suggestive: 'eq.false', order: 'created_at.desc', limit: '1' };
   const weekly = await fetchWallpapers({ ...base, select: SPOTLIGHT_SELECT, is_weekly: 'eq.true' });
   if (weekly[0]) return renderSpotlight(weekly[0], true);
-  const featured = await fetchWallpapers({ ...base, select: SPOTLIGHT_SELECT, is_featured: 'eq.true' });
+  const featured = await fetchWallpapers({ ...base, select: SELECT, is_featured: 'eq.true' });
   renderSpotlight(featured[0], false);
 }
 
@@ -316,19 +403,23 @@ async function loadCreatorSpotlight() {
 async function loadPage() {
   loadMore.disabled = true;
   loadMore.textContent = 'Loading…';
-  const rows = await fetchWallpapers({ status: 'eq.approved', is_suggestive: 'eq.false', order: 'created_at.desc', limit: String(PAGE_SIZE), offset: String(offset) });
-  rows.forEach((wallpaper) => grid.append(renderCard(wallpaper)));
+  const filters = { status: 'eq.approved', order: 'created_at.desc', limit: String(PAGE_SIZE), offset: String(offset) };
+  if (!feedShowSuggestive) filters.is_suggestive = 'eq.false';
+  const rows = await fetchWallpapers(filters);
+  loadedWallpapers.push(...rows.filter((wallpaper) => !loadedWallpapers.some((loaded) => loaded.id === wallpaper.id)));
   offset += rows.length;
+  lastFeedPageFull = rows.length === PAGE_SIZE;
+  renderFeed();
   grid.setAttribute('aria-busy', 'false');
-  status.hidden = rows.length > 0;
-  loadMore.hidden = rows.length < PAGE_SIZE;
   loadMore.disabled = false;
   loadMore.textContent = 'Load more';
 }
 
 async function initialize() {
   try {
+    await initializeFeedAuth();
     await Promise.all([loadSpotlight(), loadFeatured(), loadCreatorSpotlight(), loadPage()]);
+    feedReady = true;
   } catch (error) {
     console.error(error);
     grid.setAttribute('aria-busy', 'false');
@@ -339,5 +430,21 @@ async function initialize() {
 
 if (grid && loadMore && spotlightCard) {
   loadMore.addEventListener('click', () => { loadPage().catch((error) => { console.error(error); loadMore.disabled = false; loadMore.textContent = 'Try again'; }); });
+  document.getElementById('feed-search').addEventListener('input', renderFeed);
+  document.getElementById('feed-rarity').addEventListener('change', renderFeed);
+  document.getElementById('feed-quality').addEventListener('change', renderFeed);
+  document.getElementById('feed-sort-popular').addEventListener('click', () => { feedSort = 'popular'; updateFeedSortControls(); renderFeed(); });
+  document.getElementById('feed-sort-recent').addEventListener('click', () => { feedSort = 'recent'; updateFeedSortControls(); renderFeed(); });
+  document.getElementById('feed-suggestive').addEventListener('change', (event) => {
+    if (!feedUser) { event.target.checked = false; return; }
+    feedShowSuggestive = event.target.checked; saveFeedSuggestive(feedUser.id, feedShowSuggestive); renderFeedSuggestiveControl();
+    reloadFeed().catch((error) => { console.error(error); status.textContent = 'Unable to refresh wallpapers right now.'; });
+  });
+  window.addEventListener('wallverse:wallpaper-updated', (event) => {
+    const updated = event.detail?.wallpaper; const existing = loadedWallpapers.find((wallpaper) => wallpaper.id === updated?.id);
+    if (existing) { Object.assign(existing, updated); renderFeed(); }
+  });
   initialize();
 }
+
+window.WallverseCards = { thumbnailUrl, tagsFor, qualityLabel, compactNumber, publicCardScore, publicCardTier, enablePublicCardMotion };

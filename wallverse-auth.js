@@ -3,7 +3,7 @@
   const supabaseApi = window.supabase;
   if (!config || !supabaseApi?.createClient) return;
 
-  const client = supabaseApi.createClient(config.supabaseUrl, config.supabaseAnonKey, {
+  const client = window.WallverseSupabase || supabaseApi.createClient(config.supabaseUrl, config.supabaseAnonKey, {
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
   });
   const authDialog = document.getElementById('auth-dialog');

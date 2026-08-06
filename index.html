@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=collection-controls-1">
+  <link rel="stylesheet" href="/styles.css?v=card-inspection-1">
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to content</a>
@@ -68,6 +68,40 @@
     <button class="button button--oauth" id="google-sign-in" type="button">Continue with Google</button>
   </dialog>
 
+  <dialog class="inspection-dialog" id="inspection-dialog" aria-labelledby="inspection-title">
+    <button class="dialog-close inspection-dialog__close" type="button" data-close-inspection aria-label="Close card inspection">×</button>
+    <div class="inspection-layout">
+      <div class="inspection-stage">
+        <article class="collectible-card inspection-card" id="inspection-card">
+          <div class="collectible-card__media">
+            <img class="collectible-card__image" id="inspection-image" alt="">
+            <div class="collectible-card__surface"></div><div class="collectible-card__shine" aria-hidden="true"></div>
+            <div class="collectible-card__info"><h2 id="inspection-title">Wallpaper card</h2><div class="collectible-card__stats" id="inspection-card-stats"></div></div>
+          </div>
+        </article>
+        <p class="inspection-rarity" id="inspection-rarity"></p>
+      </div>
+      <div class="inspection-details">
+        <div class="inspection-owner" id="inspection-owner"></div>
+        <p class="inspection-description" id="inspection-description" hidden></p>
+        <div class="inspection-tags" id="inspection-tags"></div>
+        <dl class="inspection-facts" id="inspection-facts"></dl>
+        <div class="inspection-actions">
+          <button class="inspection-action inspection-action--like" id="inspection-like" type="button" aria-pressed="false"><span aria-hidden="true">♥</span><strong>Like</strong><small id="inspection-like-count">0</small></button>
+          <button class="inspection-action" id="inspection-favorite" type="button" aria-pressed="false" hidden><span aria-hidden="true">◆</span><strong>Favorite</strong><small>Save</small></button>
+          <button class="inspection-action inspection-action--download" id="inspection-download" type="button" disabled aria-disabled="true" title="Ad-supported HD downloads are coming soon"><span aria-hidden="true">⇩</span><strong>Download</strong><small>Coming soon</small></button>
+        </div>
+        <p class="inspection-message" id="inspection-message" role="status" aria-live="polite"></p>
+        <section class="inspection-comments" aria-labelledby="inspection-comments-title">
+          <div class="inspection-comments__head"><h3 id="inspection-comments-title">Comments</h3><span id="inspection-comment-count"></span></div>
+          <div class="inspection-comment-list" id="inspection-comment-list"><p>Loading comments…</p></div>
+          <form class="inspection-comment-form" id="inspection-comment-form" hidden><label class="sr-only" for="inspection-comment-body">Add a comment</label><textarea id="inspection-comment-body" maxlength="500" rows="2" placeholder="Add a comment…" required></textarea><button class="button button--small" type="submit">Post</button></form>
+          <button class="text-button inspection-sign-in" id="inspection-sign-in" type="button">Sign in to like, save or comment</button>
+        </section>
+      </div>
+    </div>
+  </dialog>
+
   <main id="main-content">
     <section class="home-highlights section-shell" aria-labelledby="spotlight-title">
       <h1 class="sr-only" id="spotlight-title">Wallverse wallpapers</h1>
@@ -100,6 +134,13 @@
 
     <section class="for-you section-shell" id="for-you" aria-labelledby="for-you-title">
       <div class="section-heading"><div><p class="eyebrow"><span></span> DISCOVER</p><h2 id="for-you-title">For you</h2></div></div>
+      <div class="collection-toolbar feed-toolbar" aria-label="Wallpaper filters">
+        <label class="collection-search"><span class="sr-only">Search wallpapers</span><span aria-hidden="true">⌕</span><input id="feed-search" type="search" placeholder="Search wallpapers or creators"></label>
+        <div class="collection-sort" role="group" aria-label="Sort wallpapers"><button class="collection-sort__button is-active" id="feed-sort-popular" type="button" aria-pressed="true">Popular &amp; rare</button><button class="collection-sort__button" id="feed-sort-recent" type="button" aria-pressed="false">Recent</button></div>
+        <label class="collection-filter"><span>Rarity</span><select id="feed-rarity"><option value="all">All rarities</option><option value="mythic">Mythic</option><option value="legendary">Legendary</option><option value="epic">Epic</option><option value="rare">Rare</option><option value="uncommon">Uncommon</option><option value="common">Common</option></select></label>
+        <label class="collection-filter"><span>Quality</span><select id="feed-quality"><option value="all">All quality</option><option value="premium">Premium</option><option value="high">High</option><option value="standard">Standard</option></select></label>
+        <label class="collection-toggle" title="Sign in to control suggestive content"><input id="feed-suggestive" type="checkbox" disabled><span class="collection-toggle__track" aria-hidden="true"></span><span>Show suggestive</span></label>
+      </div>
       <p class="feed-status" id="feed-status" role="status" aria-live="polite">Loading wallpapers…</p>
       <div class="wallpaper-grid" id="wallpaper-grid" aria-busy="true"></div>
       <div class="feed-actions"><button class="button button--ghost" id="load-more" type="button" hidden>Load more</button></div>
@@ -127,9 +168,10 @@
     <p class="copyright">© <span id="year"></span> Wallverse. Google Play is a trademark of Google LLC.</p>
   </footer>
   <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
-  <script src="/site-protection.js?v=collection-controls-1" defer></script>
-  <script src="/wallverse-data.js?v=collection-controls-1" defer></script>
+  <script src="/site-protection.js?v=card-inspection-1" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-  <script src="/wallverse-auth.js?v=profile-layout-1" defer></script>
+  <script src="/wallverse-data.js?v=card-inspection-1" defer></script>
+  <script src="/wallverse-auth.js?v=card-inspection-1" defer></script>
+  <script src="/wallpaper-inspection.js?v=card-inspection-1" defer></script>
 </body>
 </html>
