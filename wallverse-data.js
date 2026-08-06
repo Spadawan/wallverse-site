@@ -4,7 +4,7 @@ const WALLVERSE_PUBLIC_CONFIG = {
   r2PublicBaseUrl: 'https://images.wallverse.win',
 };
 
-const SELECT = 'id,title,image_url,thumbnail_url,category,quality,is_weekly,is_featured,storage_provider,thumbnail_storage_key,hd_storage_key,profiles!wallpapers_user_id_fkey(username,avatar_url),wallpaper_tags(tags(name))';
+const SELECT = 'id,title,thumbnail_url,category,quality,is_weekly,is_featured,storage_provider,thumbnail_storage_key,profiles!wallpapers_user_id_fkey(username,avatar_url),wallpaper_tags(tags(name))';
 const FEATURED_SELECT = `${SELECT},user_id,likes_count,downloads_count,views_count`;
 const CREATOR_STATS_SELECT = 'id,quality,likes_count,downloads_count,views_count,is_featured,is_weekly';
 const PAGE_SIZE = 12;
@@ -27,10 +27,10 @@ function r2Url(key) {
   return `${WALLVERSE_PUBLIC_CONFIG.r2PublicBaseUrl.replace(/\/+$/, '')}/${normalized.split('/').map(encodeURIComponent).join('/')}`;
 }
 
-function imageUrl(wallpaper, thumbnail = true) {
+function thumbnailUrl(wallpaper) {
   if (!wallpaper) return '';
-  const key = thumbnail ? wallpaper.thumbnail_storage_key : wallpaper.hd_storage_key;
-  const legacy = thumbnail ? wallpaper.thumbnail_url : wallpaper.image_url;
+  const key = wallpaper.thumbnail_storage_key;
+  const legacy = wallpaper.thumbnail_url;
   return wallpaper.storage_provider === 'cloudflare_r2' && key ? r2Url(key) : (legacy || '');
 }
 
@@ -108,7 +108,7 @@ function renderCard(wallpaper) {
   card.style.setProperty('--idle-delay', `${(cardIndex++ % 9) * -1.1}s`);
   const imageWrap = document.createElement('div');
   imageWrap.className = 'wallpaper-image';
-  const src = imageUrl(wallpaper, true);
+  const src = thumbnailUrl(wallpaper);
   if (src) {
     const image = new Image();
     image.src = src;
@@ -143,7 +143,7 @@ function renderCard(wallpaper) {
 function renderSpotlight(wallpaper, weekly) {
   if (!wallpaper) { spotlightCard.hidden = true; return; }
   const image = document.getElementById('spotlight-image');
-  const src = imageUrl(wallpaper, true) || imageUrl(wallpaper, false);
+  const src = thumbnailUrl(wallpaper);
   image.src = src; image.alt = wallpaper.title ? `${wallpaper.title} wallpaper` : 'Wallverse wallpaper';
   image.onerror = () => { spotlightCard.hidden = true; };
   document.getElementById('spotlight-badge').textContent = weekly ? 'Weekly' : 'Featured';
@@ -172,7 +172,7 @@ function renderFeatured(wallpapers) {
     const label = card.querySelector('.highlight-label');
     const title = card.querySelector('h2');
     if (!wallpaper) { card.hidden = true; return; }
-    image.src = imageUrl(wallpaper, true);
+    image.src = thumbnailUrl(wallpaper);
     image.alt = wallpaper.title ? `${wallpaper.title} wallpaper` : 'Featured Wallverse wallpaper';
     image.onerror = () => { card.hidden = true; };
     label.textContent = 'Featured wallpaper';
@@ -247,7 +247,7 @@ function renderCreatorSpotlight(profile, bannerUrl, wallpapers) {
 
 async function loadCreatorSpotlight() {
   const profiles = await fetchPublic('profiles', {
-    select: 'id,username,role,avatar_url,banner_url',
+    select: 'id,username,role,avatar_url',
     is_spotlighted: 'eq.true',
     limit: '1',
   });
@@ -261,11 +261,8 @@ async function loadCreatorSpotlight() {
     order: 'created_at.desc',
     limit: '1000',
   });
-  let bannerUrl = profile.banner_url || '';
-  if (!bannerUrl) {
-    const bannerWallpapers = await fetchWallpapers({ status: 'eq.approved', is_suggestive: 'eq.false', user_id: `eq.${profile.id}`, order: 'created_at.desc', limit: '1' });
-    bannerUrl = imageUrl(bannerWallpapers[0], true);
-  }
+  const bannerWallpapers = await fetchWallpapers({ status: 'eq.approved', is_suggestive: 'eq.false', user_id: `eq.${profile.id}`, order: 'created_at.desc', limit: '1' });
+  const bannerUrl = thumbnailUrl(bannerWallpapers[0]);
   renderCreatorSpotlight(profile, bannerUrl, creatorWallpapers);
 }
 
