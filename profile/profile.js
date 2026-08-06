@@ -8,6 +8,8 @@
   const signedOut = document.getElementById('profile-signed-out');
   let profile = null;
   let user = null;
+  let collectionCards = [];
+  let collectionSort = 'popular';
 
   function setupHero() {
     const identity = hero.querySelector('.profile-hero__identity');
@@ -79,18 +81,26 @@
     const { data: rewards, error: rewardsError } = await client.from('card_rewards').select('owned_card_instance_id').eq('user_id', ownerId).in('status', ['unrevealed', 'opening']);
     if (rewardsError) throw rewardsError;
     const hidden = new Set((rewards || []).map((row) => row.owned_card_instance_id));
-    const { data, error } = await client.from('user_cards')
-      .select('id,card_frame_id,card_frame_type,archived,wallpapers!inner(id,title,thumbnail_url,quality,likes_count,downloads_count,views_count,is_featured,is_weekly,polished_until,status,is_suggestive,storage_provider,thumbnail_storage_key)')
-      .eq('owner_id', ownerId)
-      .eq('wallpapers.status', 'approved')
-      .eq('wallpapers.is_suggestive', false)
-      .order('acquired_at', { ascending: false })
-      .limit(80);
-    if (error) throw error;
-    return (data || []).filter((card) => {
+    const cards = [];
+    let offset = 0;
+    while (true) {
+      const { data, error } = await client.from('user_cards')
+        .select('id,acquired_at,card_frame_id,card_frame_type,archived,wallpapers!inner(id,title,thumbnail_url,quality,likes_count,downloads_count,views_count,is_featured,is_weekly,polished_until,status,is_suggestive,storage_provider,thumbnail_storage_key)')
+        .eq('owner_id', ownerId)
+        .eq('wallpapers.status', 'approved')
+        .eq('wallpapers.is_suggestive', false)
+        .order('acquired_at', { ascending: false })
+        .range(offset, offset + 999);
+      if (error) throw error;
+      const page = data || [];
+      cards.push(...page);
+      if (page.length < 1000) break;
+      offset += 1000;
+    }
+    return cards.filter((card) => {
       const wallpaper = Array.isArray(card.wallpapers) ? card.wallpapers[0] : card.wallpapers;
       return !hidden.has(card.id) && Boolean(wallpaper);
-    }).slice(0, 40);
+    });
   }
   function setAvatar(node) {
     const username = profile?.username || 'W'; node.textContent = username.charAt(0).toUpperCase();
@@ -162,11 +172,20 @@
     const number = document.createElement('span'); number.textContent = compact(value);
     item.append(symbol, number); item.setAttribute('aria-label', `${label}: ${Number(value) || 0}`); return item;
   }
-  function renderWallpapers(cards) {
+  const tierRank = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4, mythic: 5 };
+  function wallpaperFor(card) { return Array.isArray(card.wallpapers) ? card.wallpapers[0] : card.wallpapers; }
+  function updateCollectionControls() {
+    document.getElementById('collection-sort-popular').classList.toggle('is-active', collectionSort === 'popular');
+    document.getElementById('collection-sort-popular').setAttribute('aria-pressed', String(collectionSort === 'popular'));
+    document.getElementById('collection-sort-recent').classList.toggle('is-active', collectionSort === 'recent');
+    document.getElementById('collection-sort-recent').setAttribute('aria-pressed', String(collectionSort === 'recent'));
+  }
+  function renderWallpapers(cards, matchingCount = cards.length) {
     const grid = document.getElementById('profile-wallpaper-grid');
     const status = document.getElementById('profile-wallpapers-status');
+    collectionObserver?.disconnect();
     grid.replaceChildren(...cards.map((ownedCard) => {
-      const wallpaper = Array.isArray(ownedCard.wallpapers) ? ownedCard.wallpapers[0] : ownedCard.wallpapers;
+      const wallpaper = wallpaperFor(ownedCard);
       const tier = cardTier(wallpaper);
       const frame = String(ownedCard.card_frame_type || ownedCard.card_frame_id || 'default').replace(/[^A-Za-z]/g, '').toLowerCase() || 'default';
       const polished = wallpaper.polished_until && new Date(wallpaper.polished_until) > new Date();
@@ -184,7 +203,26 @@
       info.append(title, stats); imageBox.append(surface, shine, info); card.append(imageBox);
       observeCollectionCard(card); enableCardMotion(card); return card;
     }));
-    status.textContent = cards.length ? '' : 'No visible collection cards yet.'; status.hidden = Boolean(cards.length);
+    status.textContent = matchingCount ? `Showing ${cards.length} of ${matchingCount} cards` : 'No cards match these filters.';
+    status.hidden = false;
+  }
+  function applyCollectionView() {
+    const query = document.getElementById('collection-search').value.trim().toLocaleLowerCase();
+    const rarity = document.getElementById('collection-rarity').value;
+    const quality = document.getElementById('collection-quality').value;
+    const filtered = collectionCards.filter((card) => {
+      const wallpaper = wallpaperFor(card);
+      if (!wallpaper) return false;
+      const title = String(wallpaper.title || '').toLocaleLowerCase();
+      return (!query || title.includes(query)) && (rarity === 'all' || cardTier(wallpaper) === rarity) && (quality === 'all' || String(wallpaper.quality || '').toLocaleLowerCase() === quality);
+    });
+    filtered.sort((left, right) => {
+      if (collectionSort === 'recent') return new Date(right.acquired_at || 0) - new Date(left.acquired_at || 0);
+      const leftWallpaper = wallpaperFor(left); const rightWallpaper = wallpaperFor(right);
+      const rarityDelta = tierRank[cardTier(rightWallpaper)] - tierRank[cardTier(leftWallpaper)];
+      return rarityDelta || cardScore(rightWallpaper) - cardScore(leftWallpaper) || new Date(right.acquired_at || 0) - new Date(left.acquired_at || 0);
+    });
+    renderWallpapers(filtered.slice(0, 60), filtered.length);
   }
   async function load(sessionUser) {
     user = sessionUser || null;
@@ -201,7 +239,8 @@
       setAvatar(document.getElementById('profile-avatar'));
       const banner = document.getElementById('profile-banner');
       if (profile.banner_url) { banner.src = profile.banner_url; banner.alt = ''; banner.hidden = false; banner.onerror = () => { banner.hidden = true; }; }
-      renderWallpapers(await fetchVisibleCollection(user.id));
+      collectionCards = await fetchVisibleCollection(user.id);
+      applyCollectionView();
       try { renderStats(await fetchGlobalStats(user.id)); } catch (error) { console.warn('Profile statistics unavailable.', error); renderStats({ uploads: 0, likes: 0, downloads: 0, views: 0 }); }
       try {
         document.getElementById('profile-power').textContent = `${compact(await fetchCollectionPower(user.id))} pts`;
@@ -212,6 +251,11 @@
     } catch (error) { document.getElementById('profile-role').textContent = error.message || 'Profile unavailable.'; }
     finally { hero.setAttribute('aria-busy', 'false'); }
   }
+  document.getElementById('collection-search').addEventListener('input', applyCollectionView);
+  document.getElementById('collection-rarity').addEventListener('change', applyCollectionView);
+  document.getElementById('collection-quality').addEventListener('change', applyCollectionView);
+  document.getElementById('collection-sort-popular').addEventListener('click', () => { collectionSort = 'popular'; updateCollectionControls(); applyCollectionView(); });
+  document.getElementById('collection-sort-recent').addEventListener('click', () => { collectionSort = 'recent'; updateCollectionControls(); applyCollectionView(); });
   document.getElementById('profile-sign-out').addEventListener('click', () => client.auth.signOut());
   client.auth.onAuthStateChange((_event, session) => window.setTimeout(() => load(session?.user), 0));
   client.auth.getSession().then(({ data }) => load(data.session?.user)).catch(() => load(null));

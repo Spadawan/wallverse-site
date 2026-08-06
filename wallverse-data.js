@@ -4,9 +4,9 @@ const WALLVERSE_PUBLIC_CONFIG = {
   r2PublicBaseUrl: 'https://images.wallverse.win',
 };
 
-const SELECT = 'id,title,thumbnail_url,category,quality,is_weekly,is_featured,storage_provider,thumbnail_storage_key,profiles!wallpapers_user_id_fkey(username,avatar_url),wallpaper_tags(tags(name))';
+const SELECT = 'id,title,thumbnail_url,category,quality,likes_count,downloads_count,views_count,is_weekly,is_featured,storage_provider,thumbnail_storage_key,profiles!wallpapers_user_id_fkey(username,avatar_url),wallpaper_tags(tags(name))';
 const SPOTLIGHT_SELECT = 'id,title,image_url,thumbnail_url,category,quality,is_weekly,is_featured,storage_provider,thumbnail_storage_key,hd_storage_key,profiles!wallpapers_user_id_fkey(username,avatar_url),wallpaper_tags(tags(name))';
-const FEATURED_SELECT = `${SELECT},user_id,likes_count,downloads_count,views_count`;
+const FEATURED_SELECT = SELECT;
 const CREATOR_STATS_SELECT = 'id,quality,likes_count,downloads_count,views_count,is_featured,is_weekly';
 const PAGE_SIZE = 12;
 const SYSTEM_TAGS = new Set(['ai-generated', 'ai', 'suggestive']);
@@ -29,7 +29,7 @@ function registerIdleCard(card) {
   if (!('IntersectionObserver' in window)) return;
   if (!idleObserver) {
     idleObserver = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => entry.target.classList.toggle('is-idle', entry.isIntersecting));
+      entries.forEach((entry) => { entry.target.classList.toggle('is-idle', entry.isIntersecting); entry.target.classList.toggle('is-visible', entry.isIntersecting); });
     }, { rootMargin: '80px 0px', threshold: 0.15 });
   }
   idleObserver.observe(card);
@@ -62,13 +62,29 @@ function tagsFor(wallpaper) {
 
 function qualityLabel(quality) {
   const value = String(quality || '').toLowerCase();
-  if (value === 'premium' || value === 'hd' || value === '4k') return 'HD';
+  if (value === 'premium' || value === 'high' || value === 'hd' || value === '4k') return 'HD';
   if (value === 'standard' || value === 'sd') return 'SD';
   return '';
 }
 
 function compactNumber(value) {
   return new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(Number(value) || 0);
+}
+
+function publicCardScore(wallpaper) {
+  const quality = String(wallpaper.quality || '').toLowerCase();
+  const qualityScore = quality === 'premium' ? 180 : quality === 'high' ? 90 : quality === 'standard' ? 30 : 0;
+  return (Number(wallpaper.likes_count) || 0) * 4 + (Number(wallpaper.downloads_count) || 0) * 3 + (Number(wallpaper.views_count) || 0) + qualityScore + (wallpaper.is_featured ? 220 : 0) + (wallpaper.is_weekly ? 380 : 0);
+}
+
+function publicCardTier(wallpaper) {
+  const score = publicCardScore(wallpaper);
+  if (score >= 5000) return 'mythic';
+  if (score >= 2600) return 'legendary';
+  if (score >= 1300) return 'epic';
+  if (score >= 450) return 'rare';
+  if (score >= 120) return 'uncommon';
+  return 'common';
 }
 
 async function fetchPublic(table, filters) {
@@ -105,39 +121,54 @@ function creatorNode(profile) {
 
 function renderCard(wallpaper) {
   const card = document.createElement('article');
-  card.className = 'wallpaper-card';
+  const tier = publicCardTier(wallpaper);
+  card.className = `collectible-card collectible-card--public tier--${tier}`;
+  card.setAttribute('aria-label', `${wallpaper.title || 'Untitled card'}, ${tier} rarity`);
   card.style.setProperty('--idle-delay', `${(cardIndex++ % 9) * -1.1}s`);
   const imageWrap = document.createElement('div');
-  imageWrap.className = 'wallpaper-image';
+  imageWrap.className = 'collectible-card__media';
   const src = thumbnailUrl(wallpaper);
   if (src) {
     const image = new Image();
+    image.className = 'collectible-card__image';
     image.src = src;
     image.alt = wallpaper.title ? `${wallpaper.title} wallpaper` : 'Wallverse wallpaper';
     image.loading = 'lazy';
     image.decoding = 'async';
-    image.onerror = () => { imageWrap.classList.add('wallpaper-image--unavailable'); image.remove(); };
+    image.draggable = false;
+    image.onerror = () => { imageWrap.classList.add('collectible-card__media--unavailable'); image.remove(); };
     imageWrap.append(image);
   } else {
-    imageWrap.classList.add('wallpaper-image--unavailable');
+    imageWrap.classList.add('collectible-card__media--unavailable');
   }
+  const surface = document.createElement('div');
+  surface.className = 'collectible-card__surface';
+  const shine = document.createElement('div');
+  shine.className = 'collectible-card__shine';
+  shine.setAttribute('aria-hidden', 'true');
+  const badges = document.createElement('div');
+  badges.className = 'collectible-card__badges';
   const quality = qualityLabel(wallpaper.quality);
-  if (quality) { const badge = document.createElement('span'); badge.className = 'pill'; badge.textContent = quality; imageWrap.append(badge); }
-  const actions = document.createElement('div');
-  actions.className = 'card-actions';
-  for (const label of ['Favorite icon (not interactive)', 'More options (not interactive)']) {
-    const button = document.createElement('button');
-    button.className = 'icon-button'; button.type = 'button'; button.setAttribute('aria-label', label); button.textContent = label.startsWith('Favorite') ? '♡' : '•••'; actions.append(button);
-  }
-  imageWrap.append(actions);
+  if (quality) { const badge = document.createElement('span'); badge.className = 'pill'; badge.textContent = quality; badges.append(badge); }
   const info = document.createElement('div');
-  info.className = 'wallpaper-info';
-  if (wallpaper.title) { const title = document.createElement('h3'); title.textContent = wallpaper.title; info.append(title); }
+  info.className = 'collectible-card__info';
+  const title = document.createElement('h3'); title.textContent = wallpaper.title || 'Untitled'; info.append(title);
   const creator = creatorNode(wallpaper.profiles);
-  if (creator) info.append(creator);
+  if (creator) { creator.classList.add('collectible-card__creator'); info.append(creator); }
   const tag = tagsFor(wallpaper)[0] || wallpaper.category;
-  if (tag) { const badge = document.createElement('span'); badge.className = 'tag'; badge.textContent = tag; info.append(badge); }
-  card.append(imageWrap, info);
+  if (tag) { const badge = document.createElement('span'); badge.className = 'tag'; badge.textContent = tag; badges.append(badge); }
+  const stats = document.createElement('div');
+  stats.className = 'collectible-card__stats';
+  for (const [icon, label, value] of [['\u2665', 'Likes', wallpaper.likes_count], ['\u21a7', 'Downloads', wallpaper.downloads_count], ['\u25c9', 'Views', wallpaper.views_count]]) {
+    const stat = document.createElement('span'); stat.className = `collectible-card__stat collectible-card__stat--${label.toLowerCase()}`;
+    stat.setAttribute('aria-label', `${label}: ${Number(value) || 0}`);
+    const symbol = document.createElement('span'); symbol.className = 'collectible-card__stat-icon'; symbol.setAttribute('aria-hidden', 'true'); symbol.textContent = icon;
+    const amount = document.createElement('span'); amount.textContent = compactNumber(value);
+    stat.append(symbol, amount); stats.append(stat);
+  }
+  info.append(stats);
+  imageWrap.append(surface, shine, badges, info);
+  card.append(imageWrap);
   registerIdleCard(card);
   return card;
 }

@@ -9,7 +9,7 @@
   <link rel="icon" href="/assets/wallverse-mark.webp">
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=cards-2">
+  <link rel="stylesheet" href="/styles.css?v=collection-controls-1">
 </head>
 <body class="profile-page-body">
   <header class="site-header">
@@ -28,6 +28,12 @@
     </section>
     <section class="profile-wallpapers" id="profile-wallpapers" hidden aria-labelledby="profile-wallpapers-title">
       <div class="section-heading"><div><p class="eyebrow"><span></span> COLLECTIBLE CARDS</p><h2 id="profile-wallpapers-title">Your collection</h2></div></div>
+      <div class="collection-toolbar" aria-label="Collection controls">
+        <label class="collection-search"><span class="sr-only">Search your collection</span><span aria-hidden="true">⌕</span><input id="collection-search" type="search" placeholder="Search your collection"></label>
+        <div class="collection-sort" role="group" aria-label="Sort collection"><button class="collection-sort__button is-active" id="collection-sort-popular" type="button" aria-pressed="true">Popular &amp; rare</button><button class="collection-sort__button" id="collection-sort-recent" type="button" aria-pressed="false">Recent</button></div>
+        <label class="collection-filter"><span>Rarity</span><select id="collection-rarity"><option value="all">All rarities</option><option value="mythic">Mythic</option><option value="legendary">Legendary</option><option value="epic">Epic</option><option value="rare">Rare</option><option value="uncommon">Uncommon</option><option value="common">Common</option></select></label>
+        <label class="collection-filter"><span>Quality</span><select id="collection-quality"><option value="all">All quality</option><option value="premium">Premium</option><option value="high">High</option><option value="standard">Standard</option></select></label>
+      </div>
       <p class="feed-status" id="profile-wallpapers-status" role="status">Loading wallpapers…</p>
       <div class="wallpaper-grid" id="profile-wallpaper-grid"></div>
     </section>
@@ -35,9 +41,9 @@
   </main>
   <footer><div class="footer-brand"><a class="brand" href="/"><img src="/assets/wallverse-mark.webp" alt="" width="34" height="34"><span>WALLVERSE</span></a><p>Wallpaper discovery for Android.</p></div><nav class="footer-links" aria-label="Legal links"><a href="/privacy/">Privacy Policy</a><a href="/terms/">Terms of Service</a><a href="/delete-account.html">Delete Account</a></nav><p class="copyright">© <span id="year"></span> Wallverse. Google Play is a trademark of Google LLC.</p></footer>
   <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
-  <script src="/site-protection.js?v=cards-2" defer></script>
-  <script src="/wallverse-data.js?v=cards-2" defer></script>
+  <script src="/site-protection.js?v=collection-controls-1" defer></script>
+  <script src="/wallverse-data.js?v=collection-controls-1" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-  <script src="/profile/profile.js?v=cards-2" defer></script>
+  <script src="/profile/profile.js?v=collection-controls-1" defer></script>
 </body>
 </html>
