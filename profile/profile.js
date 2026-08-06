@@ -37,6 +37,15 @@
     const qualityScore = quality === 'premium' ? 180 : quality === 'high' ? 90 : quality === 'standard' ? 30 : 0;
     return (wallpaper.likes_count || 0) * 4 + (wallpaper.downloads_count || 0) * 3 + (wallpaper.views_count || 0) + qualityScore + (wallpaper.is_featured ? 220 : 0) + (wallpaper.is_weekly ? 380 : 0);
   }
+  function cardTier(wallpaper) {
+    const score = cardScore(wallpaper);
+    if (score >= 5000) return 'mythic';
+    if (score >= 2600) return 'legendary';
+    if (score >= 1300) return 'epic';
+    if (score >= 450) return 'rare';
+    if (score >= 120) return 'uncommon';
+    return 'common';
+  }
   function collectionPower(cards) {
     return cards.reduce((total, wallpaper) => { const value = cardScore(wallpaper); return total + value + (value >= 5000 ? 620 : value >= 2600 ? 360 : value >= 1300 ? 190 : value >= 450 ? 90 : value >= 120 ? 55 : 25); }, 0);
   }
@@ -65,6 +74,23 @@
       offset += 1000;
     }
     return collectionPower(cards);
+  }
+  async function fetchVisibleCollection(ownerId) {
+    const { data: rewards, error: rewardsError } = await client.from('card_rewards').select('owned_card_instance_id').eq('user_id', ownerId).in('status', ['unrevealed', 'opening']);
+    if (rewardsError) throw rewardsError;
+    const hidden = new Set((rewards || []).map((row) => row.owned_card_instance_id));
+    const { data, error } = await client.from('user_cards')
+      .select('id,card_frame_id,card_frame_type,archived,wallpapers!inner(id,title,thumbnail_url,quality,likes_count,downloads_count,views_count,is_featured,is_weekly,polished_until,status,is_suggestive,storage_provider,thumbnail_storage_key)')
+      .eq('owner_id', ownerId)
+      .eq('wallpapers.status', 'approved')
+      .eq('wallpapers.is_suggestive', false)
+      .order('acquired_at', { ascending: false })
+      .limit(80);
+    if (error) throw error;
+    return (data || []).filter((card) => {
+      const wallpaper = Array.isArray(card.wallpapers) ? card.wallpapers[0] : card.wallpapers;
+      return !hidden.has(card.id) && Boolean(wallpaper);
+    }).slice(0, 40);
   }
   function setAvatar(node) {
     const username = profile?.username || 'W'; node.textContent = username.charAt(0).toUpperCase();
@@ -106,20 +132,59 @@
     const values = [['Uploads', totals.uploads], ['Likes', totals.likes], ['Downloads', totals.downloads], ['Views', totals.views]];
     document.getElementById('profile-stats').replaceChildren(...values.map(([label, value]) => { const card = document.createElement('article'); const labelNode = document.createElement('span'); const valueNode = document.createElement('strong'); labelNode.textContent = label; valueNode.textContent = compact(value); card.append(labelNode, valueNode); return card; }));
   }
-  function renderWallpapers(wallpapers) {
+  let collectionObserver;
+  function observeCollectionCard(card) {
+    if (!('IntersectionObserver' in window)) { card.classList.add('is-visible'); return; }
+    collectionObserver ||= new IntersectionObserver((entries) => entries.forEach((entry) => entry.target.classList.toggle('is-visible', entry.isIntersecting)), { rootMargin: '100px 0px', threshold: 0.12 });
+    collectionObserver.observe(card);
+  }
+  function enableCardMotion(card) {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || window.matchMedia('(pointer: coarse)').matches) return;
+    card.addEventListener('pointermove', (event) => {
+      const rect = card.getBoundingClientRect();
+      const x = (event.clientX - rect.left) / rect.width;
+      const y = (event.clientY - rect.top) / rect.height;
+      card.style.setProperty('--card-rx', `${(0.5 - y) * 7}deg`);
+      card.style.setProperty('--card-ry', `${(x - 0.5) * 8}deg`);
+      card.style.setProperty('--light-x', `${x * 100}%`);
+      card.style.setProperty('--light-y', `${y * 100}%`);
+    });
+    card.addEventListener('pointerleave', () => {
+      card.style.setProperty('--card-rx', '0deg');
+      card.style.setProperty('--card-ry', '0deg');
+      card.style.setProperty('--light-x', '28%');
+      card.style.setProperty('--light-y', '18%');
+    });
+  }
+  function cardStat(icon, label, value) {
+    const item = document.createElement('span'); item.className = `collectible-card__stat collectible-card__stat--${label.toLowerCase()}`;
+    const symbol = document.createElement('span'); symbol.className = 'collectible-card__stat-icon'; symbol.setAttribute('aria-hidden', 'true'); symbol.textContent = icon;
+    const number = document.createElement('span'); number.textContent = compact(value);
+    item.append(symbol, number); item.setAttribute('aria-label', `${label}: ${Number(value) || 0}`); return item;
+  }
+  function renderWallpapers(cards) {
     const grid = document.getElementById('profile-wallpaper-grid');
     const status = document.getElementById('profile-wallpapers-status');
-    grid.replaceChildren(...wallpapers.map((wallpaper) => {
-      const card = document.createElement('article'); card.className = 'wallpaper-card';
-      const imageBox = document.createElement('div'); imageBox.className = 'wallpaper-image';
+    grid.replaceChildren(...cards.map((ownedCard) => {
+      const wallpaper = Array.isArray(ownedCard.wallpapers) ? ownedCard.wallpapers[0] : ownedCard.wallpapers;
+      const tier = cardTier(wallpaper);
+      const frame = String(ownedCard.card_frame_type || ownedCard.card_frame_id || 'default').replace(/[^A-Za-z]/g, '').toLowerCase() || 'default';
+      const polished = wallpaper.polished_until && new Date(wallpaper.polished_until) > new Date();
+      const card = document.createElement('article'); card.className = `collectible-card tier--${tier} frame--${frame}${polished ? ' is-polished' : ''}`;
+      card.setAttribute('aria-label', `${wallpaper.title || 'Untitled card'}, ${tier} rarity, ${Number(wallpaper.likes_count) || 0} likes, ${Number(wallpaper.downloads_count) || 0} downloads, ${Number(wallpaper.views_count) || 0} views`);
+      const imageBox = document.createElement('div'); imageBox.className = 'collectible-card__media';
       const source = thumbnail(wallpaper);
-      if (source) { const image = new Image(); image.src = source; image.loading = 'lazy'; image.decoding = 'async'; image.alt = wallpaper.title ? `${wallpaper.title} wallpaper` : 'Wallverse wallpaper'; image.onerror = () => imageBox.classList.add('wallpaper-image--unavailable'); imageBox.append(image); } else imageBox.classList.add('wallpaper-image--unavailable');
-      const info = document.createElement('div'); info.className = 'wallpaper-info';
-      if (wallpaper.title) { const title = document.createElement('h3'); title.textContent = wallpaper.title; info.append(title); }
-      const quality = String(wallpaper.quality || '').toLowerCase(); if (['premium', 'high', 'hd', '4k'].includes(quality)) { const badge = document.createElement('span'); badge.className = 'tag'; badge.textContent = 'HD'; info.append(badge); }
-      card.append(imageBox, info); return card;
+      if (source) { const image = new Image(); image.className = 'collectible-card__image'; image.src = source; image.loading = 'lazy'; image.decoding = 'async'; image.draggable = false; image.alt = wallpaper.title ? `${wallpaper.title} wallpaper card` : 'Wallverse collectible card'; image.onerror = () => imageBox.classList.add('collectible-card__media--unavailable'); imageBox.append(image); } else imageBox.classList.add('collectible-card__media--unavailable');
+      const surface = document.createElement('div'); surface.className = 'collectible-card__surface';
+      const shine = document.createElement('div'); shine.className = 'collectible-card__shine'; shine.setAttribute('aria-hidden', 'true');
+      const info = document.createElement('div'); info.className = 'collectible-card__info';
+      const title = document.createElement('h3'); title.textContent = wallpaper.title || 'Untitled';
+      const stats = document.createElement('div'); stats.className = 'collectible-card__stats';
+      stats.append(cardStat('♥', 'Likes', wallpaper.likes_count), cardStat('↧', 'Downloads', wallpaper.downloads_count), cardStat('◉', 'Views', wallpaper.views_count));
+      info.append(title, stats); imageBox.append(surface, shine, info); card.append(imageBox);
+      observeCollectionCard(card); enableCardMotion(card); return card;
     }));
-    status.textContent = wallpapers.length ? '' : 'No approved public wallpapers yet.'; status.hidden = Boolean(wallpapers.length);
+    status.textContent = cards.length ? '' : 'No visible collection cards yet.'; status.hidden = Boolean(cards.length);
   }
   async function load(sessionUser) {
     user = sessionUser || null;
@@ -136,9 +201,7 @@
       setAvatar(document.getElementById('profile-avatar'));
       const banner = document.getElementById('profile-banner');
       if (profile.banner_url) { banner.src = profile.banner_url; banner.alt = ''; banner.hidden = false; banner.onerror = () => { banner.hidden = true; }; }
-      const { data: wallpapers, error } = await client.from('wallpapers').select('id,title,thumbnail_url,quality,likes_count,downloads_count,views_count,is_featured,is_weekly,storage_provider,thumbnail_storage_key').eq('user_id', user.id).eq('status', 'approved').eq('is_suggestive', false).order('created_at', { ascending: false }).limit(40);
-      if (error) throw error;
-      renderWallpapers(wallpapers || []);
+      renderWallpapers(await fetchVisibleCollection(user.id));
       try { renderStats(await fetchGlobalStats(user.id)); } catch (error) { console.warn('Profile statistics unavailable.', error); renderStats({ uploads: 0, likes: 0, downloads: 0, views: 0 }); }
       try {
         document.getElementById('profile-power').textContent = `${compact(await fetchCollectionPower(user.id))} pts`;
