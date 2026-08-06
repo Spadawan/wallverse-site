@@ -13,6 +13,40 @@
   const compact = (value) => new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(Number(value) || 0);
   const r2Url = (key) => `${config.r2PublicBaseUrl.replace(/\/+$/, '')}/${String(key || '').replace(/^\/+/, '').split('/').map(encodeURIComponent).join('/')}`;
   const thumbnail = (wallpaper) => wallpaper.storage_provider === 'cloudflare_r2' && wallpaper.thumbnail_storage_key ? r2Url(wallpaper.thumbnail_storage_key) : (wallpaper.thumbnail_url || '');
+  function cardScore(wallpaper) {
+    const quality = String(wallpaper.quality || '').toLowerCase();
+    const qualityScore = quality === 'premium' ? 180 : quality === 'high' ? 90 : quality === 'standard' ? 30 : 0;
+    return (wallpaper.likes_count || 0) * 4 + (wallpaper.downloads_count || 0) * 3 + (wallpaper.views_count || 0) + qualityScore + (wallpaper.is_featured ? 220 : 0) + (wallpaper.is_weekly ? 380 : 0);
+  }
+  function collectionPower(cards) {
+    return cards.reduce((total, wallpaper) => { const value = cardScore(wallpaper); return total + value + (value >= 5000 ? 620 : value >= 2600 ? 360 : value >= 1300 ? 190 : value >= 450 ? 90 : value >= 120 ? 55 : 25); }, 0);
+  }
+  async function fetchCollectionPower(ownerId) {
+    let rewardRows = [];
+    try {
+      const { data, error } = await client.from('card_rewards').select('owned_card_instance_id').eq('user_id', ownerId).in('status', ['unrevealed', 'opening']);
+      if (error) throw error;
+      rewardRows = data || [];
+    } catch (error) {
+      // Rewards are only used to exclude cards that the app has not revealed yet.
+      console.warn('Unable to exclude unrevealed rewards from Collection Power.', error);
+    }
+    const hidden = new Set(rewardRows.map((row) => row.owned_card_instance_id));
+    const cards = [];
+    let offset = 0;
+    while (true) {
+      const { data, error } = await client.from('user_cards').select('id,archived,wallpapers!inner(id,status,quality,likes_count,downloads_count,views_count,is_featured,is_weekly)').eq('owner_id', ownerId).order('acquired_at', { ascending: false }).range(offset, offset + 999);
+      if (error) throw error;
+      const page = data || [];
+      page.forEach((card) => {
+        const wallpaper = Array.isArray(card.wallpapers) ? card.wallpapers[0] : card.wallpapers;
+        if (wallpaper && (wallpaper.status === 'approved' || card.archived === true) && !hidden.has(card.id)) cards.push(wallpaper);
+      });
+      if (page.length < 1000) break;
+      offset += 1000;
+    }
+    return collectionPower(cards);
+  }
   function setAvatar(node) {
     const username = profile?.username || 'W'; node.textContent = username.charAt(0).toUpperCase();
     if (!profile?.avatar_url) return;
@@ -66,6 +100,12 @@
       const { data: wallpapers, error } = await client.from('wallpapers').select('id,title,thumbnail_url,quality,likes_count,downloads_count,views_count,is_featured,is_weekly,storage_provider,thumbnail_storage_key').eq('user_id', user.id).eq('status', 'approved').eq('is_suggestive', false).order('created_at', { ascending: false }).limit(40);
       if (error) throw error;
       renderStats(wallpapers || []); renderWallpapers(wallpapers || []);
+      try {
+        document.getElementById('profile-power').textContent = `${compact(await fetchCollectionPower(user.id))} pts`;
+      } catch (error) {
+        console.warn('Collection Power unavailable.', error);
+        document.getElementById('profile-power').textContent = '—';
+      }
     } catch (error) { document.getElementById('profile-role').textContent = error.message || 'Profile unavailable.'; }
     finally { hero.setAttribute('aria-busy', 'false'); }
   }
