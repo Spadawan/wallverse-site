@@ -5,6 +5,7 @@ const WALLVERSE_PUBLIC_CONFIG = {
 };
 
 const SELECT = 'id,title,thumbnail_url,category,quality,is_weekly,is_featured,storage_provider,thumbnail_storage_key,profiles!wallpapers_user_id_fkey(username,avatar_url),wallpaper_tags(tags(name))';
+const SPOTLIGHT_SELECT = 'id,title,image_url,thumbnail_url,category,quality,is_weekly,is_featured,storage_provider,thumbnail_storage_key,hd_storage_key,profiles!wallpapers_user_id_fkey(username,avatar_url),wallpaper_tags(tags(name))';
 const FEATURED_SELECT = `${SELECT},user_id,likes_count,downloads_count,views_count`;
 const CREATOR_STATS_SELECT = 'id,quality,likes_count,downloads_count,views_count,is_featured,is_weekly';
 const PAGE_SIZE = 12;
@@ -13,6 +14,8 @@ const apiHeaders = {
   apikey: WALLVERSE_PUBLIC_CONFIG.supabaseAnonKey,
   Authorization: `Bearer ${WALLVERSE_PUBLIC_CONFIG.supabaseAnonKey}`,
 };
+
+window.WALLVERSE_PUBLIC_CONFIG = WALLVERSE_PUBLIC_CONFIG;
 
 const grid = document.getElementById('wallpaper-grid');
 const status = document.getElementById('feed-status');
@@ -32,6 +35,12 @@ function thumbnailUrl(wallpaper) {
   const key = wallpaper.thumbnail_storage_key;
   const legacy = wallpaper.thumbnail_url;
   return wallpaper.storage_provider === 'cloudflare_r2' && key ? r2Url(key) : (legacy || '');
+}
+
+function spotlightUrl(wallpaper) {
+  if (!wallpaper) return '';
+  if (wallpaper.storage_provider === 'cloudflare_r2' && wallpaper.hd_storage_key) return r2Url(wallpaper.hd_storage_key);
+  return wallpaper.image_url || thumbnailUrl(wallpaper);
 }
 
 function tagsFor(wallpaper) {
@@ -143,7 +152,7 @@ function renderCard(wallpaper) {
 function renderSpotlight(wallpaper, weekly) {
   if (!wallpaper) { spotlightCard.hidden = true; return; }
   const image = document.getElementById('spotlight-image');
-  const src = thumbnailUrl(wallpaper);
+  const src = weekly ? spotlightUrl(wallpaper) : thumbnailUrl(wallpaper);
   image.src = src; image.alt = wallpaper.title ? `${wallpaper.title} wallpaper` : 'Wallverse wallpaper';
   image.onerror = () => { spotlightCard.hidden = true; };
   document.getElementById('spotlight-badge').textContent = weekly ? 'Weekly' : 'Featured';
@@ -158,9 +167,9 @@ function renderSpotlight(wallpaper, weekly) {
 
 async function loadSpotlight() {
   const base = { status: 'eq.approved', is_suggestive: 'eq.false', order: 'created_at.desc', limit: '1' };
-  const weekly = await fetchWallpapers({ ...base, is_weekly: 'eq.true' });
+  const weekly = await fetchWallpapers({ ...base, select: SPOTLIGHT_SELECT, is_weekly: 'eq.true' });
   if (weekly[0]) return renderSpotlight(weekly[0], true);
-  const featured = await fetchWallpapers({ ...base, is_featured: 'eq.true' });
+  const featured = await fetchWallpapers({ ...base, select: SPOTLIGHT_SELECT, is_featured: 'eq.true' });
   renderSpotlight(featured[0], false);
 }
 
