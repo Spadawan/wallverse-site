@@ -10,6 +10,7 @@
   let user = null;
   let collectionCards = [];
   let collectionSort = 'popular';
+  let showSuggestive = false;
 
   function setupHero() {
     const identity = hero.querySelector('.profile-hero__identity');
@@ -77,20 +78,21 @@
     }
     return collectionPower(cards);
   }
-  async function fetchVisibleCollection(ownerId) {
+  async function fetchVisibleCollection(ownerId, includeSuggestive = false) {
     const { data: rewards, error: rewardsError } = await client.from('card_rewards').select('owned_card_instance_id').eq('user_id', ownerId).in('status', ['unrevealed', 'opening']);
     if (rewardsError) throw rewardsError;
     const hidden = new Set((rewards || []).map((row) => row.owned_card_instance_id));
     const cards = [];
     let offset = 0;
     while (true) {
-      const { data, error } = await client.from('user_cards')
+      let request = client.from('user_cards')
         .select('id,acquired_at,card_frame_id,card_frame_type,archived,wallpapers!inner(id,title,thumbnail_url,quality,likes_count,downloads_count,views_count,is_featured,is_weekly,polished_until,status,is_suggestive,storage_provider,thumbnail_storage_key)')
         .eq('owner_id', ownerId)
         .eq('wallpapers.status', 'approved')
-        .eq('wallpapers.is_suggestive', false)
         .order('acquired_at', { ascending: false })
         .range(offset, offset + 999);
+      if (!includeSuggestive) request = request.eq('wallpapers.is_suggestive', false);
+      const { data, error } = await request;
       if (error) throw error;
       const page = data || [];
       cards.push(...page);
@@ -179,6 +181,14 @@
     document.getElementById('collection-sort-popular').setAttribute('aria-pressed', String(collectionSort === 'popular'));
     document.getElementById('collection-sort-recent').classList.toggle('is-active', collectionSort === 'recent');
     document.getElementById('collection-sort-recent').setAttribute('aria-pressed', String(collectionSort === 'recent'));
+    document.getElementById('collection-suggestive').checked = Boolean(user && showSuggestive);
+  }
+  function suggestiveStorageKey(ownerId) { return `wallverse-show-suggestive:${ownerId}`; }
+  function savedSuggestivePreference(ownerId) {
+    try { return window.localStorage.getItem(suggestiveStorageKey(ownerId)) === 'true'; } catch { return false; }
+  }
+  function saveSuggestivePreference(ownerId, value) {
+    try { window.localStorage.setItem(suggestiveStorageKey(ownerId), String(value)); } catch { /* A private browser may block storage. */ }
   }
   function renderWallpapers(cards, matchingCount = cards.length) {
     const grid = document.getElementById('profile-wallpaper-grid');
@@ -230,7 +240,7 @@
     document.getElementById('profile-sign-in').hidden = Boolean(user);
     document.getElementById('profile-sign-out').hidden = !user;
     wallpapersSection.hidden = !user; signedOut.hidden = Boolean(user);
-    if (!user) { hero.hidden = true; return; }
+    if (!user) { showSuggestive = false; updateCollectionControls(); hero.hidden = true; return; }
     hero.hidden = false; hero.setAttribute('aria-busy', 'true');
     try {
       profile = await ensureProfile(user);
@@ -239,7 +249,9 @@
       setAvatar(document.getElementById('profile-avatar'));
       const banner = document.getElementById('profile-banner');
       if (profile.banner_url) { banner.src = profile.banner_url; banner.alt = ''; banner.hidden = false; banner.onerror = () => { banner.hidden = true; }; }
-      collectionCards = await fetchVisibleCollection(user.id);
+      showSuggestive = savedSuggestivePreference(user.id);
+      updateCollectionControls();
+      collectionCards = await fetchVisibleCollection(user.id, showSuggestive);
       applyCollectionView();
       try { renderStats(await fetchGlobalStats(user.id)); } catch (error) { console.warn('Profile statistics unavailable.', error); renderStats({ uploads: 0, likes: 0, downloads: 0, views: 0 }); }
       try {
@@ -256,6 +268,28 @@
   document.getElementById('collection-quality').addEventListener('change', applyCollectionView);
   document.getElementById('collection-sort-popular').addEventListener('click', () => { collectionSort = 'popular'; updateCollectionControls(); applyCollectionView(); });
   document.getElementById('collection-sort-recent').addEventListener('click', () => { collectionSort = 'recent'; updateCollectionControls(); applyCollectionView(); });
+  document.getElementById('collection-suggestive').addEventListener('change', async (event) => {
+    if (!user) { event.target.checked = false; return; }
+    const requested = event.target.checked;
+    const status = document.getElementById('profile-wallpapers-status');
+    const previousCards = collectionCards;
+    showSuggestive = requested;
+    if (!requested) { collectionCards = collectionCards.filter((card) => !wallpaperFor(card)?.is_suggestive); applyCollectionView(); }
+    updateCollectionControls();
+    status.textContent = 'Refreshing collection…'; status.hidden = false;
+    event.target.disabled = true;
+    try {
+      collectionCards = await fetchVisibleCollection(user.id, requested);
+      saveSuggestivePreference(user.id, requested);
+      applyCollectionView();
+    } catch (error) {
+      showSuggestive = !requested;
+      collectionCards = previousCards;
+      updateCollectionControls();
+      applyCollectionView();
+      status.textContent = 'Unable to update this setting. Please try again.';
+    } finally { event.target.disabled = false; }
+  });
   document.getElementById('profile-sign-out').addEventListener('click', () => client.auth.signOut());
   client.auth.onAuthStateChange((_event, session) => window.setTimeout(() => load(session?.user), 0));
   client.auth.getSession().then(({ data }) => load(data.session?.user)).catch(() => load(null));
