@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=4c59e96">
+  <link rel="stylesheet" href="/styles.css?v=live-data-1">
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to content</a>
@@ -62,33 +62,24 @@
           <a class="button button--ghost" href="#for-you">Explore now <span aria-hidden="true">↓</span></a>
         </div>
       </div>
-      <article class="spotlight-card">
-        <img src="/assets/wallpaper-flower.webp" alt="Twilight city wallpaper with a crescent moon" fetchpriority="high">
+      <article class="spotlight-card" id="spotlight-card" aria-busy="true">
+        <img id="spotlight-image" alt="" fetchpriority="high">
         <div class="spotlight-card__shade"></div>
-        <div class="spotlight-card__top"><span class="pill">Featured</span><button class="icon-button" type="button" aria-label="Favorite icon (not interactive)">♡</button></div>
+        <div class="spotlight-card__top"><span class="pill" id="spotlight-badge">Loading</span><button class="icon-button" type="button" aria-label="Favorite icon (not interactive)">♡</button></div>
         <div class="spotlight-card__meta">
-          <p class="spotlight-card__label">Wallpaper of the week</p>
-          <h2>Afterglow</h2>
-          <div class="creator"><span class="avatar avatar--violet" aria-hidden="true">N</span><span><strong>@northstar</strong><small>Digital artist</small></span></div>
+          <p class="spotlight-card__label" id="spotlight-label">Loading spotlight</p>
+          <h2 id="spotlight-name">&nbsp;</h2>
+          <div class="creator" id="spotlight-creator" hidden></div>
         </div>
         <div class="pager" aria-label="Spotlight page 1 of 3"><span class="is-active"></span><span></span><span></span></div>
       </article>
     </section>
 
     <section class="for-you section-shell" id="for-you" aria-labelledby="for-you-title">
-      <div class="section-heading"><div><p class="eyebrow"><span></span> DISCOVER</p><h2 id="for-you-title">For you</h2></div><p>Wallpaper picks in the same phone-first format you’ll find in Wallverse.</p></div>
-      <div class="wallpaper-grid">
-        <article class="wallpaper-card"><div class="wallpaper-image"><img src="/assets/wallpaper-snow.webp" alt="Snow-covered mountain cabin wallpaper"><span class="pill">4K</span><div class="card-actions"><button class="icon-button" type="button" aria-label="Favorite icon (not interactive)">♡</button><button class="icon-button" type="button" aria-label="More options (not interactive)">•••</button></div></div><div class="wallpaper-info"><h3>Quiet Altitude</h3><div class="creator"><span class="avatar avatar--ice">A</span><strong>@aurora</strong></div><span class="tag">Nature</span></div></article>
-        <article class="wallpaper-card"><div class="wallpaper-image"><img src="/assets/wallpaper-flower.webp" alt="Close-up sunflower wallpaper" loading="lazy"><span class="pill">HD</span><div class="card-actions"><button class="icon-button" type="button" aria-label="Favorite icon (not interactive)">♡</button><button class="icon-button" type="button" aria-label="More options (not interactive)">•••</button></div></div><div class="wallpaper-info"><h3>Golden Hour</h3><div class="creator"><span class="avatar avatar--gold">M</span><strong>@mira</strong></div><span class="tag">Nature</span></div></article>
-        <article class="wallpaper-card"><div class="wallpaper-image"><img src="/assets/wallpaper-dark.webp" alt="Dark warm geometric wallpaper" loading="lazy"><span class="pill">AMOLED</span><div class="card-actions"><button class="icon-button" type="button" aria-label="Favorite icon (not interactive)">♡</button><button class="icon-button" type="button" aria-label="More options (not interactive)">•••</button></div></div><div class="wallpaper-info"><h3>Afterlight</h3><div class="creator"><span class="avatar avatar--coral">J</span><strong>@juno</strong></div><span class="tag">Abstract</span></div></article>
-        <article class="wallpaper-card"><div class="wallpaper-image"><img src="/assets/wallpaper-field.webp" alt="Green landscape beneath a cloudscape wallpaper" loading="lazy"><span class="pill">4K</span><div class="card-actions"><button class="icon-button" type="button" aria-label="Favorite icon (not interactive)">♡</button><button class="icon-button" type="button" aria-label="More options (not interactive)">•••</button></div></div><div class="wallpaper-info"><h3>Open Skies</h3><div class="creator"><span class="avatar avatar--mint">L</span><strong>@lumen</strong></div><span class="tag">Landscape</span></div></article>
-        <article class="wallpaper-card"><div class="wallpaper-image"><img src="/assets/wallpaper-city.webp" alt="Sunlit green hillside wallpaper" loading="lazy"><span class="pill">HD</span><div class="card-actions"><button class="icon-button" type="button" aria-label="Favorite icon (not interactive)">♡</button><button class="icon-button" type="button" aria-label="More options (not interactive)">•••</button></div></div><div class="wallpaper-info"><h3>Hillside Drift</h3><div class="creator"><span class="avatar avatar--violet">K</span><strong>@kairos</strong></div><span class="tag">Illustration</span></div></article>
-        <article class="wallpaper-card"><div class="wallpaper-image"><img src="/assets/wallpaper-extra.webp" alt="Vivid abstract wallpaper" loading="lazy"><span class="pill">4K</span><div class="card-actions"><button class="icon-button" type="button" aria-label="Favorite icon (not interactive)">♡</button><button class="icon-button" type="button" aria-label="More options (not interactive)">•••</button></div></div><div class="wallpaper-info"><h3>Electric Tide</h3><div class="creator"><span class="avatar avatar--blue">R</span><strong>@reverb</strong></div><span class="tag">Abstract</span></div></article>
-        <article class="wallpaper-card"><div class="wallpaper-image"><img src="/assets/wallpaper-snow.webp" alt="Snow-covered mountain cabin wallpaper at twilight" loading="lazy"><span class="pill">HD</span><div class="card-actions"><button class="icon-button" type="button" aria-label="Favorite icon (not interactive)">♡</button><button class="icon-button" type="button" aria-label="More options (not interactive)">•••</button></div></div><div class="wallpaper-info"><h3>Blue Silence</h3><div class="creator"><span class="avatar avatar--ice">S</span><strong>@solace</strong></div><span class="tag">Nature</span></div></article>
-        <article class="wallpaper-card"><div class="wallpaper-image"><img src="/assets/wallpaper-dark.webp" alt="Abstract dark architectural wallpaper" loading="lazy"><span class="pill">AMOLED</span><div class="card-actions"><button class="icon-button" type="button" aria-label="Favorite icon (not interactive)">♡</button><button class="icon-button" type="button" aria-label="More options (not interactive)">•••</button></div></div><div class="wallpaper-info"><h3>Low Light</h3><div class="creator"><span class="avatar avatar--coral">E</span><strong>@echo</strong></div><span class="tag">Minimal</span></div></article>
-        <article class="wallpaper-card"><div class="wallpaper-image"><img src="/assets/wallpaper-flower.webp" alt="Sunflower wallpaper in warm natural light" loading="lazy"><span class="pill">4K</span><div class="card-actions"><button class="icon-button" type="button" aria-label="Favorite icon (not interactive)">♡</button><button class="icon-button" type="button" aria-label="More options (not interactive)">•••</button></div></div><div class="wallpaper-info"><h3>Sunbeam</h3><div class="creator"><span class="avatar avatar--gold">I</span><strong>@iris</strong></div><span class="tag">Photography</span></div></article>
-        <article class="wallpaper-card"><div class="wallpaper-image"><img src="/assets/wallpaper-field.webp" alt="Quiet green field and cloud wallpaper" loading="lazy"><span class="pill">HD</span><div class="card-actions"><button class="icon-button" type="button" aria-label="Favorite icon (not interactive)">♡</button><button class="icon-button" type="button" aria-label="More options (not interactive)">•••</button></div></div><div class="wallpaper-info"><h3>Daydream</h3><div class="creator"><span class="avatar avatar--mint">O</span><strong>@orbit</strong></div><span class="tag">Landscape</span></div></article>
-      </div>
+      <div class="section-heading"><div><p class="eyebrow"><span></span> DISCOVER</p><h2 id="for-you-title">For you</h2></div><p>Fresh public wallpapers from the Wallverse community.</p></div>
+      <p class="feed-status" id="feed-status" role="status" aria-live="polite">Loading wallpapers…</p>
+      <div class="wallpaper-grid" id="wallpaper-grid" aria-busy="true"></div>
+      <div class="feed-actions"><button class="button button--ghost" id="load-more" type="button" hidden>Load more</button></div>
     </section>
 
     <section class="features section-shell" id="about" aria-labelledby="features-title">
@@ -113,5 +104,6 @@
     <p class="copyright">© <span id="year"></span> Wallverse. Google Play is a trademark of Google LLC.</p>
   </footer>
   <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+  <script src="/wallverse-data.js?v=live-data-1" defer></script>
 </body>
 </html>
