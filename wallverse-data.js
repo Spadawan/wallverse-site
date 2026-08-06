@@ -189,10 +189,10 @@ function renderCard(wallpaper) {
   if (tag) { const badge = document.createElement('span'); badge.className = 'tag'; badge.textContent = tag; badges.append(badge); }
   const stats = document.createElement('div');
   stats.className = 'collectible-card__stats';
-  for (const [icon, label, value] of [['\u2665', 'Likes', wallpaper.likes_count], ['\u21a7', 'Downloads', wallpaper.downloads_count], ['\u25c9', 'Views', wallpaper.views_count]]) {
+  for (const [icon, label, value] of [['\u2665', 'Likes', wallpaper.likes_count], ['\u21a7', 'Downloads', wallpaper.downloads_count], ['visibility', 'Views', wallpaper.views_count]]) {
     const stat = document.createElement('span'); stat.className = `collectible-card__stat collectible-card__stat--${label.toLowerCase()}`;
     stat.setAttribute('aria-label', `${label}: ${Number(value) || 0}`);
-    const symbol = document.createElement('span'); symbol.className = 'collectible-card__stat-icon'; symbol.setAttribute('aria-hidden', 'true'); symbol.textContent = icon;
+    const symbol = document.createElement('span'); symbol.className = `collectible-card__stat-icon${label === 'Views' ? ' material-symbols-rounded' : ''}`; symbol.setAttribute('aria-hidden', 'true'); symbol.textContent = icon;
     const amount = document.createElement('span'); amount.textContent = compactNumber(value);
     stat.append(symbol, amount); stats.append(stat);
   }
@@ -512,7 +512,6 @@ if (grid && loadMore && spotlightCard) {
     window.setTimeout(() => search.focus({ preventScroll: true }), 380);
   });
   document.getElementById('header-search')?.addEventListener('click', () => {
-    document.body.classList.add('search-focused');
     document.getElementById('for-you')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     window.setTimeout(() => document.getElementById('feed-search')?.focus({ preventScroll: true }), 380);
   });

@@ -156,8 +156,8 @@
       const rect = card.getBoundingClientRect();
       const x = (event.clientX - rect.left) / rect.width;
       const y = (event.clientY - rect.top) / rect.height;
-      card.style.setProperty('--card-rx', `${(0.5 - y) * 5}deg`);
-      card.style.setProperty('--card-ry', `${(x - 0.5) * 6}deg`);
+      card.style.setProperty('--card-rx', `${(0.5 - y) * 3.5}deg`);
+      card.style.setProperty('--card-ry', `${(x - 0.5) * 4.5}deg`);
       card.style.setProperty('--light-x', `${x * 100}%`);
       card.style.setProperty('--light-y', `${y * 100}%`);
     });
@@ -170,7 +170,7 @@
   }
   function cardStat(icon, label, value) {
     const item = document.createElement('span'); item.className = `collectible-card__stat collectible-card__stat--${label.toLowerCase()}`;
-    const symbol = document.createElement('span'); symbol.className = 'collectible-card__stat-icon'; symbol.setAttribute('aria-hidden', 'true'); symbol.textContent = icon;
+    const symbol = document.createElement('span'); symbol.className = `collectible-card__stat-icon${label === 'Views' ? ' material-symbols-rounded' : ''}`; symbol.setAttribute('aria-hidden', 'true'); symbol.textContent = icon;
     const number = document.createElement('span'); number.textContent = compact(value);
     item.append(symbol, number); item.setAttribute('aria-label', `${label}: ${Number(value) || 0}`); return item;
   }
@@ -210,7 +210,7 @@
       const info = document.createElement('div'); info.className = 'collectible-card__info';
       const title = document.createElement('h3'); title.textContent = wallpaper.title || 'Untitled';
       const stats = document.createElement('div'); stats.className = 'collectible-card__stats';
-      stats.append(cardStat('♥', 'Likes', wallpaper.likes_count), cardStat('↧', 'Downloads', wallpaper.downloads_count), cardStat('◉', 'Views', wallpaper.views_count));
+      stats.append(cardStat('♥', 'Likes', wallpaper.likes_count), cardStat('↧', 'Downloads', wallpaper.downloads_count), cardStat('visibility', 'Views', wallpaper.views_count));
       info.append(title, stats); imageBox.append(surface, shine, info); card.append(imageBox);
       const inspect = () => window.dispatchEvent(new CustomEvent('wallverse:inspect', { detail: { wallpaper } }));
       card.addEventListener('click', inspect);

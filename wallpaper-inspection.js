@@ -42,7 +42,7 @@
   function stat(icon, label, value) {
     const item = document.createElement('span'); item.className = `collectible-card__stat collectible-card__stat--${label.toLowerCase()}`;
     item.setAttribute('aria-label', `${label}: ${Number(value) || 0}`);
-    const symbol = document.createElement('span'); symbol.className = 'collectible-card__stat-icon'; symbol.setAttribute('aria-hidden', 'true'); symbol.textContent = icon;
+    const symbol = document.createElement('span'); symbol.className = `collectible-card__stat-icon${label === 'Views' ? ' material-symbols-rounded' : ''}`; symbol.setAttribute('aria-hidden', 'true'); symbol.textContent = icon;
     const number = document.createElement('span'); number.textContent = helpers.compactNumber(value);
     item.append(symbol, number); return item;
   }
@@ -113,7 +113,7 @@
     image.src = helpers.thumbnailUrl(wallpaper); image.alt = wallpaper.title ? `${wallpaper.title} wallpaper card` : 'Wallverse wallpaper card'; image.draggable = false;
     document.getElementById('inspection-title').textContent = wallpaper.title || 'Untitled';
     document.getElementById('inspection-rarity').textContent = `${tier}${polished ? ' · Polished' : ''}`;
-    document.getElementById('inspection-card-stats').replaceChildren(stat('♥', 'Likes', wallpaper.likes_count), stat('⇩', 'Downloads', wallpaper.downloads_count), stat('◉', 'Views', wallpaper.views_count));
+    document.getElementById('inspection-card-stats').replaceChildren(stat('♥', 'Likes', wallpaper.likes_count), stat('⇩', 'Downloads', wallpaper.downloads_count), stat('visibility', 'Views', wallpaper.views_count));
     document.getElementById('inspection-like-count').textContent = helpers.compactNumber(wallpaper.likes_count);
     const profile = profileFor(wallpaper.profiles); const owner = document.getElementById('inspection-owner');
     owner.replaceChildren(avatar(profile));
@@ -166,7 +166,7 @@
       if (error) throw error;
       currentWallpaper.likes_count = Math.max(0, (Number(currentWallpaper.likes_count) || 0) + (liked ? 1 : -1));
       document.getElementById('inspection-like-count').textContent = helpers.compactNumber(currentWallpaper.likes_count);
-      document.getElementById('inspection-card-stats').replaceChildren(stat('♥', 'Likes', currentWallpaper.likes_count), stat('⇩', 'Downloads', currentWallpaper.downloads_count), stat('◉', 'Views', currentWallpaper.views_count));
+      document.getElementById('inspection-card-stats').replaceChildren(stat('♥', 'Likes', currentWallpaper.likes_count), stat('⇩', 'Downloads', currentWallpaper.downloads_count), stat('visibility', 'Views', currentWallpaper.views_count));
       window.dispatchEvent(new CustomEvent('wallverse:wallpaper-updated', { detail: { wallpaper: currentWallpaper } }));
     } catch (error) { liked = previous; renderSocialState(); setMessage(error.message || 'Unable to update this like.'); }
     finally { socialBusy = false; likeButton.disabled = false; }
