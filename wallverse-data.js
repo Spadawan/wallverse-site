@@ -6,6 +6,7 @@ const WALLVERSE_PUBLIC_CONFIG = {
 
 const SELECT = 'id,title,image_url,thumbnail_url,category,quality,is_weekly,is_featured,storage_provider,thumbnail_storage_key,hd_storage_key,profiles!wallpapers_user_id_fkey(username,avatar_url),wallpaper_tags(tags(name))';
 const FEATURED_SELECT = `${SELECT},user_id,likes_count,downloads_count,views_count`;
+const CREATOR_STATS_SELECT = 'id,quality,likes_count,downloads_count,views_count,is_featured,is_weekly';
 const PAGE_SIZE = 12;
 const SYSTEM_TAGS = new Set(['ai-generated', 'ai', 'suggestive']);
 const apiHeaders = {
@@ -44,6 +45,29 @@ function qualityLabel(quality) {
   if (value === 'premium' || value === 'hd' || value === '4k') return 'HD';
   if (value === 'standard' || value === 'sd') return 'SD';
   return '';
+}
+
+function compactNumber(value) {
+  return new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(Number(value) || 0);
+}
+
+function wallpaperScore(wallpaper) {
+  const quality = String(wallpaper?.quality || '').toLowerCase();
+  const qualityScore = quality === 'premium' ? 180 : quality === 'high' ? 90 : quality === 'standard' ? 30 : 0;
+  return (Number(wallpaper?.likes_count) || 0) * 4
+    + (Number(wallpaper?.downloads_count) || 0) * 3
+    + (Number(wallpaper?.views_count) || 0)
+    + qualityScore
+    + (wallpaper?.is_featured ? 220 : 0)
+    + (wallpaper?.is_weekly ? 380 : 0);
+}
+
+function collectionPower(wallpapers) {
+  return wallpapers.reduce((total, wallpaper) => {
+    const score = wallpaperScore(wallpaper);
+    const tierBonus = score >= 5000 ? 620 : score >= 2600 ? 360 : score >= 1300 ? 190 : score >= 450 ? 90 : score >= 120 ? 55 : 25;
+    return total + score + tierBonus;
+  }, 0);
 }
 
 async function fetchPublic(table, filters) {
@@ -119,7 +143,7 @@ function renderCard(wallpaper) {
 function renderSpotlight(wallpaper, weekly) {
   if (!wallpaper) { spotlightCard.hidden = true; return; }
   const image = document.getElementById('spotlight-image');
-  const src = imageUrl(wallpaper, false) || imageUrl(wallpaper, true);
+  const src = imageUrl(wallpaper, true) || imageUrl(wallpaper, false);
   image.src = src; image.alt = wallpaper.title ? `${wallpaper.title} wallpaper` : 'Wallverse wallpaper';
   image.onerror = () => { spotlightCard.hidden = true; };
   document.getElementById('spotlight-badge').textContent = weekly ? 'Weekly' : 'Featured';
@@ -145,12 +169,14 @@ function renderFeatured(wallpapers) {
   cards.forEach((card, index) => {
     const wallpaper = wallpapers[index];
     const image = card.querySelector('img');
-    const title = card.querySelector('p');
+    const label = card.querySelector('.highlight-label');
+    const title = card.querySelector('h2');
     if (!wallpaper) { card.hidden = true; return; }
     image.src = imageUrl(wallpaper, true);
     image.alt = wallpaper.title ? `${wallpaper.title} wallpaper` : 'Featured Wallverse wallpaper';
     image.onerror = () => { card.hidden = true; };
-    title.textContent = wallpaper.title || 'Featured wallpaper';
+    label.textContent = 'Featured wallpaper';
+    title.textContent = wallpaper.title || 'Untitled wallpaper';
     card.hidden = false;
   });
   document.getElementById('featured-grid').setAttribute('aria-busy', 'false');
@@ -176,7 +202,32 @@ async function loadFeatured() {
   if (unique.length > 2) window.setInterval(display, 6500);
 }
 
-function renderCreatorSpotlight(profile, bannerUrl) {
+function renderCreatorStats(wallpapers) {
+  const stats = document.getElementById('creator-spotlight-stats');
+  const totals = wallpapers.reduce((summary, wallpaper) => ({
+    likes: summary.likes + (Number(wallpaper.likes_count) || 0),
+    downloads: summary.downloads + (Number(wallpaper.downloads_count) || 0),
+    views: summary.views + (Number(wallpaper.views_count) || 0),
+  }), { likes: 0, downloads: 0, views: 0 });
+  const values = [
+    ['Uploads', wallpapers.length],
+    ['Likes', totals.likes],
+    ['Downloads', totals.downloads],
+    ['Views', totals.views],
+    ['Collection power', collectionPower(wallpapers)],
+  ];
+  stats.replaceChildren(...values.map(([label, value]) => {
+    const item = document.createElement('div');
+    const term = document.createElement('dt');
+    const description = document.createElement('dd');
+    term.textContent = label;
+    description.textContent = compactNumber(value);
+    item.append(term, description);
+    return item;
+  }));
+}
+
+function renderCreatorSpotlight(profile, bannerUrl, wallpapers) {
   const card = document.getElementById('creator-spotlight');
   if (!profile?.username) { card.hidden = true; return; }
   const banner = card.querySelector('.creator-spotlight__banner');
@@ -190,6 +241,7 @@ function renderCreatorSpotlight(profile, bannerUrl) {
   const creator = document.getElementById('creator-spotlight-profile');
   const creatorContent = creatorNode(profile);
   creator.replaceChildren(...creatorContent.childNodes);
+  renderCreatorStats(wallpapers);
   card.setAttribute('aria-busy', 'false');
 }
 
@@ -201,12 +253,20 @@ async function loadCreatorSpotlight() {
   });
   const profile = profiles[0];
   if (!profile) { document.getElementById('creator-spotlight').hidden = true; return; }
+  const creatorWallpapers = await fetchPublic('wallpapers', {
+    select: CREATOR_STATS_SELECT,
+    status: 'eq.approved',
+    is_suggestive: 'eq.false',
+    user_id: `eq.${profile.id}`,
+    order: 'created_at.desc',
+    limit: '1000',
+  });
   let bannerUrl = profile.banner_url || '';
   if (!bannerUrl) {
-    const wallpapers = await fetchWallpapers({ status: 'eq.approved', is_suggestive: 'eq.false', user_id: `eq.${profile.id}`, order: 'created_at.desc', limit: '1' });
-    bannerUrl = imageUrl(wallpapers[0], true);
+    const bannerWallpapers = await fetchWallpapers({ status: 'eq.approved', is_suggestive: 'eq.false', user_id: `eq.${profile.id}`, order: 'created_at.desc', limit: '1' });
+    bannerUrl = imageUrl(bannerWallpapers[0], true);
   }
-  renderCreatorSpotlight(profile, bannerUrl);
+  renderCreatorSpotlight(profile, bannerUrl, creatorWallpapers);
 }
 
 async function loadPage() {

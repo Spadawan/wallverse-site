@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=live-highlights-1">
+  <link rel="stylesheet" href="/styles.css?v=live-highlights-stats-1">
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to content</a>
@@ -65,13 +65,17 @@
       </article>
       <aside class="highlights-side" aria-label="Featured wallpapers and creator spotlight">
         <div class="featured-grid" id="featured-grid" aria-busy="true">
-          <article class="featured-card"><img alt="" class="featured-card__image"><div class="featured-card__shade"></div><p>Loading featured wallpaper</p></article>
-          <article class="featured-card"><img alt="" class="featured-card__image"><div class="featured-card__shade"></div><p>Loading featured wallpaper</p></article>
+          <article class="featured-card"><img alt="" class="featured-card__image"><div class="featured-card__shade"></div><span class="pill featured-card__badge">Featured</span><p class="highlight-label">Featured wallpaper</p><h2>Loading featured wallpaper</h2></article>
+          <article class="featured-card"><img alt="" class="featured-card__image"><div class="featured-card__shade"></div><span class="pill featured-card__badge">Featured</span><p class="highlight-label">Featured wallpaper</p><h2>Loading featured wallpaper</h2></article>
         </div>
         <article class="creator-spotlight" id="creator-spotlight" aria-busy="true">
           <img class="creator-spotlight__banner" alt="">
           <div class="creator-spotlight__shade"></div>
-          <div class="creator-spotlight__content"><p class="eyebrow">CREATOR SPOTLIGHT</p><div class="creator" id="creator-spotlight-profile"></div></div>
+          <div class="creator-spotlight__content">
+            <p class="highlight-label">Creator spotlight</p>
+            <div class="creator-spotlight__profile" id="creator-spotlight-profile"></div>
+            <dl class="creator-spotlight__stats" id="creator-spotlight-stats" aria-label="Creator statistics"></dl>
+          </div>
         </article>
       </aside>
     </section>
@@ -105,6 +109,6 @@
     <p class="copyright">© <span id="year"></span> Wallverse. Google Play is a trademark of Google LLC.</p>
   </footer>
   <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
-  <script src="/wallverse-data.js?v=live-highlights-1" defer></script>
+  <script src="/wallverse-data.js?v=live-highlights-stats-1" defer></script>
 </body>
 </html>
