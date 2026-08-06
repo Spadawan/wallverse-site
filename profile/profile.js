@@ -86,7 +86,7 @@
     let offset = 0;
     while (true) {
       let request = client.from('user_cards')
-        .select('id,acquired_at,card_frame_id,card_frame_type,archived,wallpapers!inner(id,title,thumbnail_url,quality,likes_count,downloads_count,views_count,is_featured,is_weekly,polished_until,status,is_suggestive,storage_provider,thumbnail_storage_key)')
+        .select('id,acquired_at,card_frame_id,card_frame_type,archived,wallpapers!inner(id,user_id,title,description,thumbnail_url,category,quality,width,height,file_size,likes_count,downloads_count,views_count,is_featured,is_weekly,polished_until,status,is_suggestive,storage_provider,thumbnail_storage_key,profiles!wallpapers_user_id_fkey(username,avatar_url),wallpaper_tags(tags(name)))')
         .eq('owner_id', ownerId)
         .eq('wallpapers.status', 'approved')
         .order('acquired_at', { ascending: false })
@@ -156,8 +156,8 @@
       const rect = card.getBoundingClientRect();
       const x = (event.clientX - rect.left) / rect.width;
       const y = (event.clientY - rect.top) / rect.height;
-      card.style.setProperty('--card-rx', `${(0.5 - y) * 7}deg`);
-      card.style.setProperty('--card-ry', `${(x - 0.5) * 8}deg`);
+      card.style.setProperty('--card-rx', `${(0.5 - y) * 5}deg`);
+      card.style.setProperty('--card-ry', `${(x - 0.5) * 6}deg`);
       card.style.setProperty('--light-x', `${x * 100}%`);
       card.style.setProperty('--light-y', `${y * 100}%`);
     });
@@ -200,7 +200,8 @@
       const frame = String(ownedCard.card_frame_type || ownedCard.card_frame_id || 'default').replace(/[^A-Za-z]/g, '').toLowerCase() || 'default';
       const polished = wallpaper.polished_until && new Date(wallpaper.polished_until) > new Date();
       const card = document.createElement('article'); card.className = `collectible-card tier--${tier} frame--${frame}${polished ? ' is-polished' : ''}`;
-      card.setAttribute('aria-label', `${wallpaper.title || 'Untitled card'}, ${tier} rarity, ${Number(wallpaper.likes_count) || 0} likes, ${Number(wallpaper.downloads_count) || 0} downloads, ${Number(wallpaper.views_count) || 0} views`);
+      card.setAttribute('role', 'button'); card.tabIndex = 0;
+      card.setAttribute('aria-label', `Open ${wallpaper.title || 'Untitled card'}, ${tier} rarity, ${Number(wallpaper.likes_count) || 0} likes, ${Number(wallpaper.downloads_count) || 0} downloads, ${Number(wallpaper.views_count) || 0} views`);
       const imageBox = document.createElement('div'); imageBox.className = 'collectible-card__media';
       const source = thumbnail(wallpaper);
       if (source) { const image = new Image(); image.className = 'collectible-card__image'; image.src = source; image.loading = 'lazy'; image.decoding = 'async'; image.draggable = false; image.alt = wallpaper.title ? `${wallpaper.title} wallpaper card` : 'Wallverse collectible card'; image.onerror = () => imageBox.classList.add('collectible-card__media--unavailable'); imageBox.append(image); } else imageBox.classList.add('collectible-card__media--unavailable');
@@ -211,6 +212,9 @@
       const stats = document.createElement('div'); stats.className = 'collectible-card__stats';
       stats.append(cardStat('♥', 'Likes', wallpaper.likes_count), cardStat('↧', 'Downloads', wallpaper.downloads_count), cardStat('◉', 'Views', wallpaper.views_count));
       info.append(title, stats); imageBox.append(surface, shine, info); card.append(imageBox);
+      const inspect = () => window.dispatchEvent(new CustomEvent('wallverse:inspect', { detail: { wallpaper } }));
+      card.addEventListener('click', inspect);
+      card.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); inspect(); } });
       observeCollectionCard(card); enableCardMotion(card); return card;
     }));
     status.textContent = matchingCount ? `Showing ${cards.length} of ${matchingCount} cards` : 'No cards match these filters.';

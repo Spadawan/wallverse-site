@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=card-inspection-1">
+  <link rel="stylesheet" href="/styles.css?v=ui-polish-1">
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to content</a>
@@ -30,14 +30,13 @@
     <nav class="nav nav--desktop" aria-label="Main navigation">
       <a href="/" aria-current="page">Home</a>
       <a href="#for-you">Explore</a>
-      <a href="#for-you">Collections</a>
       <a href="#community">Creators</a>
       <a href="#about">About</a>
     </nav>
     <div class="header-actions">
-      <div class="search-visual" aria-label="Search wallpapers coming soon" role="img">
+      <button class="search-visual search-visual--trigger" id="header-search" type="button" aria-label="Search wallpapers">
         <span aria-hidden="true">⌕</span><span>Search wallpapers</span>
-      </div>
+      </button>
       <button class="button button--auth" id="auth-trigger" type="button">Sign in</button>
       <div class="account-menu" id="account-menu" hidden>
         <button class="account-menu__trigger" id="account-menu-trigger" type="button" aria-haspopup="true" aria-expanded="false"><span class="avatar avatar--violet" id="account-avatar">W</span><span id="account-name">Profile</span></button>
@@ -47,7 +46,7 @@
       <details class="mobile-menu">
         <summary aria-label="Open menu"><span></span><span></span><span></span></summary>
         <nav aria-label="Mobile navigation">
-          <a href="/">Home</a><a href="#for-you">Explore</a><a href="#for-you">Collections</a><a href="#community">Creators</a><a href="#about">About</a><a href="/profile/">Profile</a><button type="button" data-open-auth>Sign in</button>
+          <a href="/">Home</a><a href="#for-you">Explore</a><a href="#community">Creators</a><a href="#about">About</a><a href="/profile/">Profile</a><button type="button" data-open-auth>Sign in</button>
           <a href="https://play.google.com/store/apps/details?id=app.wallverse.mobile" target="_blank" rel="noopener">Get the app ↗</a>
         </nav>
       </details>
@@ -125,7 +124,7 @@
           <div class="creator-spotlight__shade"></div>
           <div class="creator-spotlight__content">
             <p class="highlight-label">Creator spotlight</p>
-            <div class="creator-spotlight__profile" id="creator-spotlight-profile"></div>
+            <div class="creator-spotlight__profile"><div id="creator-spotlight-profile"></div><button class="creator-follow" id="creator-follow" type="button" aria-pressed="false">Follow</button></div>
             <dl class="creator-spotlight__stats" id="creator-spotlight-stats" aria-label="Creator statistics"></dl>
           </div>
         </article>
@@ -170,7 +169,7 @@
   <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
   <script src="/site-protection.js?v=card-inspection-1" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-  <script src="/wallverse-data.js?v=card-inspection-1" defer></script>
+  <script src="/wallverse-data.js?v=ui-polish-1" defer></script>
   <script src="/wallverse-auth.js?v=card-inspection-1" defer></script>
   <script src="/wallpaper-inspection.js?v=card-inspection-1" defer></script>
 </body>

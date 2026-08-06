@@ -34,6 +34,7 @@ let feedRequestRevision = 0;
 let feedShowSuggestive = false;
 let feedUser = null;
 let feedReady = false;
+let creatorSpotlightProfile = null;
 
 function registerIdleCard(card) {
   if (!('IntersectionObserver' in window)) return;
@@ -381,7 +382,51 @@ function renderCreatorSpotlight(profile, bannerUrl, wallpapers) {
   const creatorContent = creatorNode(profile);
   creator.replaceChildren(...creatorContent.childNodes);
   renderCreatorStats(wallpapers);
+  creatorSpotlightProfile = profile;
+  refreshCreatorFollow().catch((error) => console.warn('Creator follow status unavailable.', error));
   card.setAttribute('aria-busy', 'false');
+}
+
+async function refreshCreatorFollow() {
+  const button = document.getElementById('creator-follow');
+  const client = window.WallverseSupabase;
+  if (!button || !creatorSpotlightProfile || !client) return;
+  const { data } = await client.auth.getUser();
+  const user = data.user || null;
+  button.hidden = Boolean(user && user.id === creatorSpotlightProfile.id);
+  button.disabled = false;
+  if (!user || user.id === creatorSpotlightProfile.id) {
+    button.classList.remove('is-following');
+    button.setAttribute('aria-pressed', 'false');
+    button.textContent = 'Follow';
+    return;
+  }
+  const { data: follow } = await client.from('follows').select('followed_id').eq('follower_id', user.id).eq('followed_id', creatorSpotlightProfile.id).maybeSingle();
+  const following = Boolean(follow);
+  button.classList.toggle('is-following', following);
+  button.setAttribute('aria-pressed', String(following));
+  button.textContent = following ? 'Following' : 'Follow';
+}
+
+async function toggleCreatorFollow() {
+  const button = document.getElementById('creator-follow');
+  const client = window.WallverseSupabase;
+  if (!button || !creatorSpotlightProfile || !client || button.disabled) return;
+  const { data } = await client.auth.getUser();
+  const user = data.user || null;
+  if (!user) { document.getElementById('auth-trigger')?.click(); return; }
+  if (user.id === creatorSpotlightProfile.id) return;
+  const shouldFollow = button.getAttribute('aria-pressed') !== 'true';
+  button.disabled = true;
+  try {
+    const { error } = await client.rpc('toggle_creator_follow', { creator_id_input: creatorSpotlightProfile.id, should_follow: shouldFollow });
+    if (error) throw error;
+    button.classList.toggle('is-following', shouldFollow);
+    button.setAttribute('aria-pressed', String(shouldFollow));
+    button.textContent = shouldFollow ? 'Following' : 'Follow';
+  } catch (error) {
+    console.warn('Unable to update creator follow.', error);
+  } finally { button.disabled = false; }
 }
 
 async function loadCreatorSpotlight() {
@@ -466,6 +511,13 @@ if (grid && loadMore && spotlightCard) {
     document.getElementById('for-you')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     window.setTimeout(() => search.focus({ preventScroll: true }), 380);
   });
+  document.getElementById('header-search')?.addEventListener('click', () => {
+    document.body.classList.add('search-focused');
+    document.getElementById('for-you')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.setTimeout(() => document.getElementById('feed-search')?.focus({ preventScroll: true }), 380);
+  });
+  document.getElementById('creator-follow')?.addEventListener('click', toggleCreatorFollow);
+  window.WallverseSupabase?.auth.onAuthStateChange(() => refreshCreatorFollow().catch((error) => console.warn('Creator follow status unavailable.', error)));
   initialize();
 }
 
