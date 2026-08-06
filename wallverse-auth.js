@@ -8,14 +8,12 @@
   });
   const usernamePattern = /^[A-Za-z0-9_]{3,20}$/;
   const authDialog = document.getElementById('auth-dialog');
-  const profileDialog = document.getElementById('profile-dialog');
   const authForm = document.getElementById('auth-form');
   const authTrigger = document.getElementById('auth-trigger');
   const accountMenu = document.getElementById('account-menu');
   const accountMenuTrigger = document.getElementById('account-menu-trigger');
   const accountMenuPanel = document.getElementById('account-menu-panel');
   const message = document.getElementById('auth-message');
-  const profileMessage = document.getElementById('profile-message');
   const emailInput = document.getElementById('auth-email');
   const passwordInput = document.getElementById('auth-password');
   const usernameInput = document.getElementById('auth-username');
@@ -59,7 +57,6 @@
     setMessage(message);
   }
   function openAuth() { setMode('sign-in'); authDialog.showModal(); emailInput.focus(); }
-  function compactNumber(value) { return new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(Number(value) || 0); }
   async function fetchProfile(user) {
     const { data, error } = await client.from('profiles').select('id,username,role,avatar_url,followers_count').eq('id', user.id).maybeSingle();
     if (error) throw error;
@@ -86,21 +83,6 @@
     const name = displayName();
     document.getElementById('account-name').textContent = `@${name}`;
     avatar(document.getElementById('account-avatar'), currentProfile);
-  }
-  async function updateProfileDialog() {
-    if (!currentUser) return;
-    if (!currentProfile) currentProfile = await ensureProfile(currentUser);
-    const name = displayName();
-    document.getElementById('profile-title').textContent = `@${name}`;
-    document.getElementById('profile-role').textContent = currentProfile.role || 'Member';
-    document.getElementById('profile-username').value = currentProfile.username || '';
-    avatar(document.getElementById('profile-avatar'), currentProfile);
-    const { data, error } = await client.from('wallpapers').select('likes_count,downloads_count,views_count').eq('user_id', currentUser.id).eq('status', 'approved').eq('is_suggestive', false).limit(1000);
-    const stats = document.getElementById('profile-stats');
-    if (error) { stats.replaceChildren(); return; }
-    const totals = (data || []).reduce((sum, wallpaper) => ({ likes: sum.likes + (wallpaper.likes_count || 0), downloads: sum.downloads + (wallpaper.downloads_count || 0), views: sum.views + (wallpaper.views_count || 0) }), { likes: 0, downloads: 0, views: 0 });
-    const values = [['Uploads', data.length], ['Likes', totals.likes], ['Downloads', totals.downloads], ['Views', totals.views]];
-    stats.replaceChildren(...values.map(([label, value]) => { const node = document.createElement('div'); const term = document.createElement('dt'); const description = document.createElement('dd'); term.textContent = label; description.textContent = compactNumber(value); node.append(term, description); return node; }));
   }
   async function signUp(email, password, username) {
     if (!usernamePattern.test(username)) throw new Error('Username must be 3–20 characters: letters, numbers, and underscores only.');
@@ -142,16 +124,6 @@
   accountMenuTrigger.addEventListener('click', () => { const open = accountMenuPanel.hidden; accountMenuPanel.hidden = !open; accountMenuTrigger.setAttribute('aria-expanded', String(open)); });
   document.querySelector('[data-open-profile]').addEventListener('click', () => { window.location.assign('/profile/'); });
   document.querySelector('[data-sign-out]').addEventListener('click', async () => { await client.auth.signOut(); accountMenuPanel.hidden = true; });
-  document.getElementById('profile-form').addEventListener('submit', async (event) => {
-    event.preventDefault(); const username = document.getElementById('profile-username').value.trim();
-    if (!usernamePattern.test(username)) { setMessage(profileMessage, 'Username must be 3–20 characters: letters, numbers, and underscores only.'); return; }
-    const { data: taken, error: lookupError } = await client.from('profiles').select('id').ilike('username', username).maybeSingle();
-    if (lookupError) { setMessage(profileMessage, lookupError.message); return; }
-    if (taken && taken.id !== currentUser.id) { setMessage(profileMessage, 'That username is already taken.'); return; }
-    const { data, error } = await client.from('profiles').update({ username }).eq('id', currentUser.id).select('id,username,role,avatar_url,followers_count').single();
-    if (error) { setMessage(profileMessage, error.message); return; }
-    currentProfile = data; await renderProfile(currentUser); await updateProfileDialog(); setMessage(profileMessage, 'Username saved.');
-  });
   client.auth.onAuthStateChange((event, session) => { if (event === 'PASSWORD_RECOVERY') { authDialog.showModal(); setMode('recovery'); } window.setTimeout(() => renderProfile(session?.user), 0); });
   client.auth.getSession().then(({ data }) => renderProfile(data.session?.user)).catch(() => renderProfile(null));
 })();

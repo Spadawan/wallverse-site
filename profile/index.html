@@ -21,14 +21,12 @@
     <section class="profile-hero" id="profile-hero" aria-busy="true">
       <div class="profile-hero__glow" aria-hidden="true"></div>
       <div class="profile-hero__identity"><span class="profile-hero__avatar avatar avatar--violet" id="profile-avatar">W</span><div><p class="highlight-label">YOUR WALLVERSE</p><h1 id="profile-name">Your profile</h1><p id="profile-role">Loading profile…</p></div></div>
-      <div class="profile-hero__power"><span>Collection Power</span><strong id="profile-power">—</strong></div>
     </section>
     <section class="profile-overview" id="profile-overview" hidden>
       <div class="profile-stats" id="profile-stats" aria-label="Profile statistics"></div>
-      <form class="profile-settings" id="profile-settings"><div><p class="highlight-label">ACCOUNT</p><h2>Profile settings</h2><p>Choose the name people see on Wallverse.</p></div><label class="auth-field">Username<input id="profile-username" type="text" autocomplete="username" minlength="3" maxlength="20" pattern="[A-Za-z0-9_]{3,20}" required></label><button class="button button--auth-submit" type="submit">Save</button><p class="auth-message" id="profile-message" role="status" aria-live="polite"></p></form>
     </section>
     <section class="profile-wallpapers" id="profile-wallpapers" hidden aria-labelledby="profile-wallpapers-title">
-      <div class="section-heading"><div><p class="eyebrow"><span></span> PUBLIC COLLECTION</p><h2 id="profile-wallpapers-title">Your wallpapers</h2></div><p>Approved public wallpapers from your Wallverse profile.</p></div>
+      <div class="section-heading"><div><p class="eyebrow"><span></span> PUBLIC COLLECTION</p><h2 id="profile-wallpapers-title">Your wallpapers</h2></div></div>
       <p class="feed-status" id="profile-wallpapers-status" role="status">Loading wallpapers…</p>
       <div class="wallpaper-grid" id="profile-wallpaper-grid"></div>
     </section>

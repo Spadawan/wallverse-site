@@ -71,25 +71,6 @@ function compactNumber(value) {
   return new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(Number(value) || 0);
 }
 
-function wallpaperScore(wallpaper) {
-  const quality = String(wallpaper?.quality || '').toLowerCase();
-  const qualityScore = quality === 'premium' ? 180 : quality === 'high' ? 90 : quality === 'standard' ? 30 : 0;
-  return (Number(wallpaper?.likes_count) || 0) * 4
-    + (Number(wallpaper?.downloads_count) || 0) * 3
-    + (Number(wallpaper?.views_count) || 0)
-    + qualityScore
-    + (wallpaper?.is_featured ? 220 : 0)
-    + (wallpaper?.is_weekly ? 380 : 0);
-}
-
-function collectionPower(wallpapers) {
-  return wallpapers.reduce((total, wallpaper) => {
-    const score = wallpaperScore(wallpaper);
-    const tierBonus = score >= 5000 ? 620 : score >= 2600 ? 360 : score >= 1300 ? 190 : score >= 450 ? 90 : score >= 120 ? 55 : 25;
-    return total + score + tierBonus;
-  }, 0);
-}
-
 async function fetchPublic(table, filters) {
   const query = new URLSearchParams(filters);
   const response = await fetch(`${WALLVERSE_PUBLIC_CONFIG.supabaseUrl}/rest/v1/${table}?${query}`, { headers: apiHeaders });
@@ -235,7 +216,6 @@ function renderCreatorStats(wallpapers) {
     ['Likes', totals.likes],
     ['Downloads', totals.downloads],
     ['Views', totals.views],
-    ['Collection power', collectionPower(wallpapers)],
   ];
   stats.replaceChildren(...values.map(([label, value]) => {
     const item = document.createElement('div');
