@@ -9,6 +9,7 @@ const SPOTLIGHT_SELECT = 'id,title,image_url,thumbnail_url,category,quality,is_w
 const FEATURED_SELECT = SELECT;
 const CREATOR_STATS_SELECT = 'id,quality,likes_count,downloads_count,views_count,is_featured,is_weekly';
 const PAGE_SIZE = 12;
+const FEED_CATALOG_PAGE_SIZE = 1000;
 const SYSTEM_TAGS = new Set(['ai-generated', 'ai', 'suggestive']);
 const apiHeaders = {
   apikey: WALLVERSE_PUBLIC_CONFIG.supabaseAnonKey,
@@ -24,12 +25,12 @@ const grid = document.getElementById('wallpaper-grid');
 const status = document.getElementById('feed-status');
 const loadMore = document.getElementById('load-more');
 const spotlightCard = document.getElementById('spotlight-card');
-let offset = 0;
 let cardIndex = 0;
 let idleObserver;
 let loadedWallpapers = [];
 let feedSort = 'popular';
-let lastFeedPageFull = true;
+let visibleFeedCount = PAGE_SIZE;
+let feedRequestRevision = 0;
 let feedShowSuggestive = false;
 let feedUser = null;
 let feedReady = false;
@@ -223,11 +224,12 @@ function renderFeed() {
     if (feedSort === 'recent') return new Date(right.created_at || 0) - new Date(left.created_at || 0);
     return feedTierRank[publicCardTier(right)] - feedTierRank[publicCardTier(left)] || publicCardScore(right) - publicCardScore(left) || new Date(right.created_at || 0) - new Date(left.created_at || 0);
   });
+  const visible = filtered.slice(0, visibleFeedCount);
   idleObserver?.disconnect();
-  grid.replaceChildren(...filtered.map(renderCard));
-  status.textContent = filtered.length ? `Showing ${filtered.length} of ${loadedWallpapers.length} loaded cards` : 'No loaded cards match these filters.';
+  grid.replaceChildren(...visible.map(renderCard));
+  status.textContent = filtered.length ? `Showing ${visible.length} of ${filtered.length} public wallpapers` : 'No public wallpapers match these filters.';
   status.hidden = false;
-  loadMore.hidden = !lastFeedPageFull;
+  loadMore.hidden = visible.length >= filtered.length;
 }
 
 function feedSuggestiveKey(userId) { return `wallverse-show-suggestive:${userId}`; }
@@ -240,10 +242,13 @@ function saveFeedSuggestive(userId, value) {
 function renderFeedSuggestiveControl() {
   const control = document.getElementById('feed-suggestive'); if (!control) return;
   control.disabled = !feedUser; control.checked = Boolean(feedUser && feedShowSuggestive);
-  control.closest('label').title = feedUser ? 'Include suggestive wallpapers' : 'Sign in to control suggestive content';
+  const label = control.closest('label');
+  label.title = feedUser ? 'Include suggestive wallpapers' : 'Sign in to control suggestive content';
+  if (feedUser) label.removeAttribute('data-tooltip');
+  else label.dataset.tooltip = 'Sign in to show suggestive content.';
 }
 async function reloadFeed() {
-  offset = 0; loadedWallpapers = []; lastFeedPageFull = true; grid.replaceChildren(); grid.setAttribute('aria-busy', 'true');
+  loadedWallpapers = []; visibleFeedCount = PAGE_SIZE; grid.replaceChildren(); grid.setAttribute('aria-busy', 'true');
   status.textContent = 'Loading wallpapers…'; status.hidden = false; await loadPage();
 }
 async function initializeFeedAuth() {
@@ -401,14 +406,24 @@ async function loadCreatorSpotlight() {
 }
 
 async function loadPage() {
+  const requestRevision = ++feedRequestRevision;
   loadMore.disabled = true;
-  loadMore.textContent = 'Loading…';
-  const filters = { status: 'eq.approved', order: 'created_at.desc', limit: String(PAGE_SIZE), offset: String(offset) };
-  if (!feedShowSuggestive) filters.is_suggestive = 'eq.false';
-  const rows = await fetchWallpapers(filters);
-  loadedWallpapers.push(...rows.filter((wallpaper) => !loadedWallpapers.some((loaded) => loaded.id === wallpaper.id)));
-  offset += rows.length;
-  lastFeedPageFull = rows.length === PAGE_SIZE;
+  loadMore.textContent = 'Loading catalog…';
+  status.textContent = 'Loading the public wallpaper catalog…'; status.hidden = false;
+  const allWallpapers = [];
+  let catalogOffset = 0;
+  while (true) {
+    const filters = { status: 'eq.approved', order: 'created_at.desc', limit: String(FEED_CATALOG_PAGE_SIZE), offset: String(catalogOffset) };
+    if (!feedShowSuggestive) filters.is_suggestive = 'eq.false';
+    const rows = await fetchWallpapers(filters);
+    if (requestRevision !== feedRequestRevision) return;
+    allWallpapers.push(...rows);
+    if (rows.length < FEED_CATALOG_PAGE_SIZE) break;
+    catalogOffset += rows.length;
+  }
+  if (requestRevision !== feedRequestRevision) return;
+  loadedWallpapers = [...new Map(allWallpapers.map((wallpaper) => [wallpaper.id, wallpaper])).values()];
+  visibleFeedCount = PAGE_SIZE;
   renderFeed();
   grid.setAttribute('aria-busy', 'false');
   loadMore.disabled = false;
@@ -429,7 +444,7 @@ async function initialize() {
 }
 
 if (grid && loadMore && spotlightCard) {
-  loadMore.addEventListener('click', () => { loadPage().catch((error) => { console.error(error); loadMore.disabled = false; loadMore.textContent = 'Try again'; }); });
+  loadMore.addEventListener('click', () => { visibleFeedCount += PAGE_SIZE; renderFeed(); });
   document.getElementById('feed-search').addEventListener('input', renderFeed);
   document.getElementById('feed-rarity').addEventListener('change', renderFeed);
   document.getElementById('feed-quality').addEventListener('change', renderFeed);
@@ -443,6 +458,13 @@ if (grid && loadMore && spotlightCard) {
   window.addEventListener('wallverse:wallpaper-updated', (event) => {
     const updated = event.detail?.wallpaper; const existing = loadedWallpapers.find((wallpaper) => wallpaper.id === updated?.id);
     if (existing) { Object.assign(existing, updated); renderFeed(); }
+  });
+  window.addEventListener('wallverse:feed-search', (event) => {
+    const search = document.getElementById('feed-search'); if (!search) return;
+    search.value = event.detail?.query || '';
+    renderFeed();
+    document.getElementById('for-you')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.setTimeout(() => search.focus({ preventScroll: true }), 380);
   });
   initialize();
 }

@@ -121,7 +121,7 @@
     const ownerName = document.createElement('strong'); ownerName.textContent = profile?.username ? `@${profile.username}` : 'Unknown creator'; ownerCopy.append(eyebrow, ownerName); owner.append(ownerCopy);
     const description = document.getElementById('inspection-description'); description.textContent = wallpaper.description || ''; description.hidden = !wallpaper.description;
     const tags = helpers.tagsFor(wallpaper); const tagsNode = document.getElementById('inspection-tags');
-    tagsNode.replaceChildren(...tags.map((tag) => { const node = document.createElement('span'); node.textContent = tag; return node; }));
+    tagsNode.replaceChildren(...tags.map((tag) => { const node = document.createElement('button'); node.type = 'button'; node.className = 'inspection-tag'; node.textContent = tag; node.setAttribute('aria-label', `Search wallpapers tagged ${tag}`); node.addEventListener('click', () => { dialog.close(); window.dispatchEvent(new CustomEvent('wallverse:feed-search', { detail: { query: tag } })); }); return node; }));
     const facts = [
       ['Rarity', tier], ['Quality', helpers.qualityLabel(wallpaper.quality) || wallpaper.quality || '—'],
       ['Dimensions', wallpaper.width && wallpaper.height ? `${wallpaper.width} × ${wallpaper.height}` : '—'],
