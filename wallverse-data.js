@@ -23,6 +23,17 @@ const loadMore = document.getElementById('load-more');
 const spotlightCard = document.getElementById('spotlight-card');
 let offset = 0;
 let cardIndex = 0;
+let idleObserver;
+
+function registerIdleCard(card) {
+  if (!('IntersectionObserver' in window)) return;
+  if (!idleObserver) {
+    idleObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => entry.target.classList.toggle('is-idle', entry.isIntersecting));
+    }, { rootMargin: '80px 0px', threshold: 0.15 });
+  }
+  idleObserver.observe(card);
+}
 
 function r2Url(key) {
   const normalized = String(key || '').replace(/^\/+/, '');
@@ -146,6 +157,7 @@ function renderCard(wallpaper) {
   const tag = tagsFor(wallpaper)[0] || wallpaper.category;
   if (tag) { const badge = document.createElement('span'); badge.className = 'tag'; badge.textContent = tag; info.append(badge); }
   card.append(imageWrap, info);
+  registerIdleCard(card);
   return card;
 }
 
@@ -299,5 +311,7 @@ async function initialize() {
   }
 }
 
-loadMore.addEventListener('click', () => { loadPage().catch((error) => { console.error(error); loadMore.disabled = false; loadMore.textContent = 'Try again'; }); });
-initialize();
+if (grid && loadMore && spotlightCard) {
+  loadMore.addEventListener('click', () => { loadPage().catch((error) => { console.error(error); loadMore.disabled = false; loadMore.textContent = 'Try again'; }); });
+  initialize();
+}

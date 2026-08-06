@@ -78,7 +78,9 @@
     currentUser = user || null;
     currentProfile = null;
     authTrigger.hidden = Boolean(user);
+    document.querySelectorAll('[data-open-auth]').forEach((button) => { button.hidden = Boolean(user); });
     accountMenu.hidden = !user;
+    document.documentElement.dataset.authenticated = user ? 'true' : 'false';
     if (!user) return;
     try { currentProfile = await ensureProfile(user); } catch (error) { console.error('Profile load failed', error); }
     const name = displayName();
@@ -138,7 +140,7 @@
     if (error) setMessage(message, error.message);
   });
   accountMenuTrigger.addEventListener('click', () => { const open = accountMenuPanel.hidden; accountMenuPanel.hidden = !open; accountMenuTrigger.setAttribute('aria-expanded', String(open)); });
-  document.querySelector('[data-open-profile]').addEventListener('click', async () => { accountMenuPanel.hidden = true; await updateProfileDialog(); profileDialog.showModal(); });
+  document.querySelector('[data-open-profile]').addEventListener('click', () => { window.location.assign('/profile/'); });
   document.querySelector('[data-sign-out]').addEventListener('click', async () => { await client.auth.signOut(); accountMenuPanel.hidden = true; });
   document.getElementById('profile-form').addEventListener('submit', async (event) => {
     event.preventDefault(); const username = document.getElementById('profile-username').value.trim();
