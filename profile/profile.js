@@ -4,11 +4,30 @@
   const client = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
   const userPattern = /^[A-Za-z0-9_]{3,20}$/;
   const hero = document.getElementById('profile-hero');
-  const overview = document.getElementById('profile-overview');
   const wallpapersSection = document.getElementById('profile-wallpapers');
   const signedOut = document.getElementById('profile-signed-out');
   let profile = null;
   let user = null;
+
+  function setupHero() {
+    const identity = hero.querySelector('.profile-hero__identity');
+    const power = hero.querySelector('.profile-hero__power');
+    const stats = document.getElementById('profile-stats');
+    if (!identity || !power || !stats) return;
+    const visual = document.createElement('div');
+    visual.className = 'profile-hero__visual';
+    const banner = document.createElement('img');
+    banner.id = 'profile-banner'; banner.alt = ''; banner.hidden = true;
+    const shade = document.createElement('div');
+    shade.className = 'profile-hero__visual-shade';
+    const metrics = document.createElement('aside');
+    metrics.className = 'profile-hero__metrics'; metrics.setAttribute('aria-label', 'Profile statistics');
+    visual.append(banner, shade, identity);
+    metrics.append(power, stats);
+    hero.replaceChildren(visual, metrics);
+    document.getElementById('profile-overview')?.remove();
+  }
+  setupHero();
 
   const compact = (value) => new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(Number(value) || 0);
   const r2Url = (key) => `${config.r2PublicBaseUrl.replace(/\/+$/, '')}/${String(key || '').replace(/^\/+/, '').split('/').map(encodeURIComponent).join('/')}`;
@@ -53,20 +72,38 @@
     const image = new Image(); image.className = 'avatar__image'; image.alt = ''; image.src = profile.avatar_url; image.onload = () => node.replaceChildren(image);
   }
   async function ensureProfile(sessionUser) {
-    const { data, error } = await client.from('profiles').select('id,username,role,avatar_url,followers_count').eq('id', sessionUser.id).maybeSingle();
+    const { data, error } = await client.from('profiles').select('id,username,role,avatar_url,banner_url,followers_count').eq('id', sessionUser.id).maybeSingle();
     if (error) throw error;
     if (data) return data;
     const source = String(sessionUser.user_metadata?.username || sessionUser.email?.split('@')[0] || 'user').replace(/[^A-Za-z0-9_]/g, '').slice(0, 14);
     const username = userPattern.test(source) ? source : `user_${sessionUser.id.slice(0, 6)}`;
     const { error: insertError } = await client.from('profiles').insert({ id: sessionUser.id, username });
     if (insertError) throw insertError;
-    const { data: created, error: createdError } = await client.from('profiles').select('id,username,role,avatar_url,followers_count').eq('id', sessionUser.id).single();
+    const { data: created, error: createdError } = await client.from('profiles').select('id,username,role,avatar_url,banner_url,followers_count').eq('id', sessionUser.id).single();
     if (createdError) throw createdError;
     return created;
   }
-  function renderStats(wallpapers) {
-    const totals = wallpapers.reduce((result, wallpaper) => ({ likes: result.likes + (wallpaper.likes_count || 0), downloads: result.downloads + (wallpaper.downloads_count || 0), views: result.views + (wallpaper.views_count || 0) }), { likes: 0, downloads: 0, views: 0 });
-    const values = [['Uploads', wallpapers.length], ['Likes', totals.likes], ['Downloads', totals.downloads], ['Views', totals.views]];
+  async function fetchGlobalStats(ownerId) {
+    const all = [];
+    let offset = 0;
+    while (true) {
+      const { data, error } = await client.from('wallpapers').select('id,status,likes_count,downloads_count,views_count').eq('user_id', ownerId).order('created_at', { ascending: false }).range(offset, offset + 999);
+      if (error) throw error;
+      const page = data || [];
+      all.push(...page);
+      if (page.length < 1000) break;
+      offset += 1000;
+    }
+    const approved = all.filter((wallpaper) => wallpaper.status === 'approved');
+    return approved.reduce((summary, wallpaper) => ({
+      uploads: summary.uploads + 1,
+      likes: summary.likes + (Number(wallpaper.likes_count) || 0),
+      downloads: summary.downloads + (Number(wallpaper.downloads_count) || 0),
+      views: summary.views + (Number(wallpaper.views_count) || 0),
+    }), { uploads: 0, likes: 0, downloads: 0, views: 0 });
+  }
+  function renderStats(totals) {
+    const values = [['Uploads', totals.uploads], ['Likes', totals.likes], ['Downloads', totals.downloads], ['Views', totals.views]];
     document.getElementById('profile-stats').replaceChildren(...values.map(([label, value]) => { const card = document.createElement('article'); const labelNode = document.createElement('span'); const valueNode = document.createElement('strong'); labelNode.textContent = label; valueNode.textContent = compact(value); card.append(labelNode, valueNode); return card; }));
   }
   function renderWallpapers(wallpapers) {
@@ -89,7 +126,7 @@
     document.documentElement.dataset.authenticated = user ? 'true' : 'false';
     document.getElementById('profile-sign-in').hidden = Boolean(user);
     document.getElementById('profile-sign-out').hidden = !user;
-    overview.hidden = !user; wallpapersSection.hidden = !user; signedOut.hidden = Boolean(user);
+    wallpapersSection.hidden = !user; signedOut.hidden = Boolean(user);
     if (!user) { hero.hidden = true; return; }
     hero.hidden = false; hero.setAttribute('aria-busy', 'true');
     try {
@@ -97,9 +134,12 @@
       document.getElementById('profile-name').textContent = `@${profile.username}`;
       document.getElementById('profile-role').textContent = profile.role || 'Member';
       setAvatar(document.getElementById('profile-avatar'));
+      const banner = document.getElementById('profile-banner');
+      if (profile.banner_url) { banner.src = profile.banner_url; banner.alt = ''; banner.hidden = false; banner.onerror = () => { banner.hidden = true; }; }
       const { data: wallpapers, error } = await client.from('wallpapers').select('id,title,thumbnail_url,quality,likes_count,downloads_count,views_count,is_featured,is_weekly,storage_provider,thumbnail_storage_key').eq('user_id', user.id).eq('status', 'approved').eq('is_suggestive', false).order('created_at', { ascending: false }).limit(40);
       if (error) throw error;
-      renderStats(wallpapers || []); renderWallpapers(wallpapers || []);
+      renderWallpapers(wallpapers || []);
+      try { renderStats(await fetchGlobalStats(user.id)); } catch (error) { console.warn('Profile statistics unavailable.', error); renderStats({ uploads: 0, likes: 0, downloads: 0, views: 0 }); }
       try {
         document.getElementById('profile-power').textContent = `${compact(await fetchCollectionPower(user.id))} pts`;
       } catch (error) {

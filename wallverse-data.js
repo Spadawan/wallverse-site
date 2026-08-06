@@ -168,20 +168,31 @@ async function loadSpotlight() {
 
 function renderFeatured(wallpapers) {
   const cards = [...document.querySelectorAll('.featured-card')];
-  cards.forEach((card, index) => {
+  const imagesReady = wallpapers.map((wallpaper) => new Promise((resolve) => {
+    if (!wallpaper) return resolve();
+    const preloaded = new Image();
+    preloaded.onload = () => resolve();
+    preloaded.onerror = () => resolve();
+    preloaded.src = thumbnailUrl(wallpaper);
+  }));
+  return Promise.all(imagesReady).then(() => {
+    cards.forEach((card) => card.classList.add('is-switching'));
+    return new Promise((resolve) => window.setTimeout(resolve, 180));
+  }).then(() => {
+    cards.forEach((card, index) => {
     const wallpaper = wallpapers[index];
     const image = card.querySelector('img');
-    const label = card.querySelector('.highlight-label');
     const title = card.querySelector('h2');
     if (!wallpaper) { card.hidden = true; return; }
     image.src = thumbnailUrl(wallpaper);
     image.alt = wallpaper.title ? `${wallpaper.title} wallpaper` : 'Featured Wallverse wallpaper';
     image.onerror = () => { card.hidden = true; };
-    label.textContent = 'Featured wallpaper';
     title.textContent = wallpaper.title || 'Untitled wallpaper';
     card.hidden = false;
+    });
+    window.requestAnimationFrame(() => cards.forEach((card) => card.classList.remove('is-switching')));
+    document.getElementById('featured-grid').setAttribute('aria-busy', 'false');
   });
-  document.getElementById('featured-grid').setAttribute('aria-busy', 'false');
 }
 
 async function loadFeatured() {
@@ -196,12 +207,16 @@ async function loadFeatured() {
   }
   if (!unique.length) { document.getElementById('featured-grid').hidden = true; return; }
   let visibleIndex = 0;
-  const display = () => {
-    renderFeatured([unique[visibleIndex], unique[(visibleIndex + 1) % unique.length]]);
+  let swapping = false;
+  const display = async () => {
+    if (swapping) return;
+    swapping = true;
+    await renderFeatured([unique[visibleIndex], unique[(visibleIndex + 1) % unique.length]]);
     visibleIndex = (visibleIndex + 2) % unique.length;
+    swapping = false;
   };
-  display();
-  if (unique.length > 2) window.setInterval(display, 6500);
+  await display();
+  if (unique.length > 2) window.setInterval(display, 6000);
 }
 
 function renderCreatorStats(wallpapers) {
