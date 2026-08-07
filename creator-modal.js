@@ -1,7 +1,8 @@
 (() => {
+  const start = () => {
   const config = window.WALLVERSE_PUBLIC_CONFIG;
   const helpers = window.WallverseCards;
-  if (!config || !helpers || !window.supabase?.createClient) return;
+  if (!config || !helpers || !window.supabase?.createClient) return false;
   const client = window.WallverseSupabase || window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
   let currentProfile = null;
   let cards = [];
@@ -81,5 +82,9 @@
   dialog.querySelector('.dialog-close').addEventListener('click', () => dialog.close());
   dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });
   dialog.querySelectorAll('[data-creator-sort]').forEach((button) => button.addEventListener('click', () => { sort = button.dataset.creatorSort; renderCards(); }));
+  window.WallverseOpenCreator = open;
   window.addEventListener('wallverse:creator-inspect', (event) => open(event.detail?.profile));
+  return true;
+  };
+  if (!start()) window.addEventListener('wallverse:data-ready', start, { once: true });
 })();

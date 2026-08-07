@@ -386,7 +386,8 @@ function renderCreatorSpotlight(profile, bannerUrl, wallpapers) {
   card.setAttribute('aria-label', `Open ${profile.username}'s creator profile`);
   const inspectCreator = (event) => {
     if (event?.target?.closest('#creator-follow')) return;
-    window.dispatchEvent(new CustomEvent('wallverse:creator-inspect', { detail: { profile } }));
+    if (typeof window.WallverseOpenCreator === 'function') window.WallverseOpenCreator(profile);
+    else window.dispatchEvent(new CustomEvent('wallverse:creator-inspect', { detail: { profile } }));
   };
   card.onclick = inspectCreator;
   card.onkeydown = (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); inspectCreator(event); } };
@@ -530,3 +531,4 @@ if (grid && loadMore && spotlightCard) {
 }
 
 window.WallverseCards = { thumbnailUrl, tagsFor, qualityLabel, compactNumber, publicCardScore, publicCardTier, enablePublicCardMotion };
+window.dispatchEvent(new Event('wallverse:data-ready'));
