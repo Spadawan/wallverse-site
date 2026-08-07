@@ -294,3 +294,33 @@ img { -webkit-user-drag:none; user-select:none; }
 .creator-spotlight:hover .creator-spotlight__stats div { border-color:rgba(40,243,255,.28); box-shadow:0 8px 20px rgba(0,0,0,.18); transform:translateY(-2px); }
 .creator-spotlight:hover .creator-spotlight__stats div:nth-child(2) { transition-delay:.04s; }.creator-spotlight:hover .creator-spotlight__stats div:nth-child(3) { transition-delay:.08s; }.creator-spotlight:hover .creator-spotlight__stats div:nth-child(4) { transition-delay:.12s; }
 @media (prefers-reduced-motion:reduce) { .spotlight-card,.featured-card,.creator-spotlight,.spotlight-card>img,.featured-card__image,.creator-spotlight__banner,.creator-spotlight__content,.creator-spotlight__profile .avatar,.creator-spotlight__stats div { transition:none; } .spotlight-card:hover,.featured-card:hover,.creator-spotlight:hover,.creator-spotlight:hover .creator-spotlight__content,.creator-spotlight:hover .creator-spotlight__profile .avatar,.creator-spotlight:hover .creator-spotlight__stats div { transform:none; } }
+
+/* Mobile dialogs are full-height, scrollable surfaces rather than squeezed desktop windows. */
+@media (max-width:820px) {
+  html,body { max-width:100%; overscroll-behavior-x:none; touch-action:pan-x pan-y; -webkit-text-size-adjust:100%; text-size-adjust:100%; }
+  .inspection-dialog,
+  .auth-dialog,
+  .profile-dialog,
+  .upload-dialog,
+  .creator-dialog { width:100dvw; max-width:none; height:100dvh; max-height:none; min-height:100dvh; margin:0; padding:calc(18px + env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left)); overflow:auto; border:0; border-radius:0; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
+  .inspection-dialog { padding:0; }
+  .inspection-layout { min-height:100%; }
+  .inspection-stage { min-height:580px; padding:70px 22px 30px; }
+  .inspection-details { padding:28px 18px calc(34px + env(safe-area-inset-bottom)); }
+  .inspection-dialog__close { position:fixed; top:max(12px,env(safe-area-inset-top)); right:max(12px,env(safe-area-inset-right)); }
+  .auth-dialog .dialog-close,
+  .profile-dialog .dialog-close,
+  .upload-dialog .dialog-close,
+  .creator-dialog .dialog-close { position:fixed; top:max(12px,env(safe-area-inset-top)); right:max(12px,env(safe-area-inset-right)); z-index:20; }
+  .upload-dialog { padding-top:calc(64px + env(safe-area-inset-top)); }
+  .creator-dialog { padding-top:calc(64px + env(safe-area-inset-top)); }
+}
+
+@media (max-width:420px) {
+  .inspection-stage { min-height:540px; padding-inline:16px; }
+  .inspection-card { width:min(276px,82vw); }
+  .inspection-actions { gap:8px; }
+  .inspection-action { min-width:0; padding-inline:8px; }
+  .auth-dialog__footer { align-items:flex-start; flex-direction:column; }
+  .upload-crop__stage { width:min(252px,72vw); }
+}
