@@ -59,12 +59,13 @@
     <button class="dialog-close" type="button" data-close-dialog aria-label="Close sign-in dialog">×</button>
     <div class="auth-dialog__head"><p class="highlight-label">WALLVERSE ACCOUNT</p><h2 id="auth-title">Welcome back.</h2><p id="auth-description">Sign in to access your Wallverse profile.</p></div>
     <form id="auth-form" novalidate>
+      <label class="auth-field" id="auth-username-field" hidden>Username<input id="auth-username" name="username" type="text" autocomplete="username" minlength="3" maxlength="20" pattern="[A-Za-z0-9_]+"></label>
       <label class="auth-field">Email<input id="auth-email" name="email" type="email" autocomplete="email" required></label>
       <label class="auth-field">Password<input id="auth-password" name="password" type="password" autocomplete="current-password" required></label>
       <p class="auth-message" id="auth-message" role="status" aria-live="polite"></p>
       <button class="button button--auth-submit" id="auth-submit" type="submit">Sign in</button>
     </form>
-    <div class="auth-dialog__footer"><button class="text-button" type="button" id="auth-reset">Forgot password?</button></div>
+    <div class="auth-dialog__footer"><button class="text-button" type="button" id="auth-sign-up">Create an account</button><button class="text-button" type="button" id="auth-reset">Forgot password?</button></div>
     <div class="auth-divider"><span></span>or<span></span></div>
     <button class="button button--oauth" id="google-sign-in" type="button">Continue with Google</button>
   </dialog>
@@ -190,8 +191,8 @@
   <script src="/site-protection.js?v=card-inspection-1" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
   <script src="/wallverse-data.js?v=deep-link-2" defer></script>
-  <script src="/wallverse-auth.js?v=upload-nav-1" defer></script>
-  <script src="/wallpaper-inspection.js?v=deep-link-2" defer></script>
+  <script src="/wallverse-auth.js?v=signup-1" defer></script>
+  <script src="/wallpaper-inspection.js?v=stats-1" defer></script>
   <script src="/wallpaper-routing.js?v=short-links-1" defer></script>
   <script src="/wallpaper-upload.js?v=webp-parity-1" defer></script>
   <script src="/creator-modal.js?v=creator-page-route-1" defer></script>

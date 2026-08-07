@@ -13,10 +13,12 @@
   const accountMenuTrigger = document.getElementById('account-menu-trigger');
   const accountMenuPanel = document.getElementById('account-menu-panel');
   const message = document.getElementById('auth-message');
+  const usernameInput = document.getElementById('auth-username');
   const emailInput = document.getElementById('auth-email');
   const passwordInput = document.getElementById('auth-password');
   const authSubmit = document.getElementById('auth-submit');
   const authReset = document.getElementById('auth-reset');
+  const authSignUp = document.getElementById('auth-sign-up');
   const googleSignIn = document.getElementById('google-sign-in');
   let mode = 'sign-in';
   let currentUser = null;
@@ -37,13 +39,18 @@
   function setMode(nextMode) {
     mode = nextMode;
     const recovering = mode === 'recovery';
+    const signingUp = mode === 'sign-up';
+    usernameInput.closest('label').hidden = !signingUp;
+    usernameInput.required = signingUp;
     emailInput.closest('label').hidden = recovering;
     emailInput.required = !recovering;
-    passwordInput.autocomplete = recovering ? 'new-password' : 'current-password';
-    document.getElementById('auth-title').textContent = recovering ? 'Choose a new password.' : 'Welcome back.';
-    document.getElementById('auth-description').textContent = recovering ? 'Choose a new password for your Wallverse account.' : 'Sign in to access your Wallverse profile.';
-    authSubmit.textContent = recovering ? 'Set new password' : 'Sign in';
-    authReset.hidden = recovering;
+    passwordInput.autocomplete = recovering || signingUp ? 'new-password' : 'current-password';
+    document.getElementById('auth-title').textContent = recovering ? 'Choose a new password.' : signingUp ? 'Create your account.' : 'Welcome back.';
+    document.getElementById('auth-description').textContent = recovering ? 'Choose a new password for your Wallverse account.' : signingUp ? 'Create an account to collect, save and share wallpapers.' : 'Sign in to access your Wallverse profile.';
+    authSubmit.textContent = recovering ? 'Set new password' : signingUp ? 'Create account' : 'Sign in';
+    authReset.hidden = recovering || signingUp;
+    authSignUp.hidden = recovering;
+    authSignUp.textContent = signingUp ? 'Already have an account?' : 'Create an account';
     googleSignIn.hidden = recovering;
     setMessage(message);
   }
@@ -85,6 +92,19 @@
         const { error } = await client.auth.updateUser({ password }); if (error) throw error;
         setMessage(message, 'Password updated. You can now sign in.'); setMode('sign-in'); return;
       }
+      if (mode === 'sign-up') {
+        const username = usernameInput.value.trim();
+        if (!/^[A-Za-z0-9_]{3,20}$/.test(username)) throw new Error('Username must be 3–20 characters and use only letters, numbers, or underscores.');
+        const { data: existing, error: usernameError } = await client.from('profiles').select('id').ilike('username', username).maybeSingle();
+        if (usernameError) throw usernameError;
+        if (existing) throw new Error('Username is already taken.');
+        const { data, error } = await client.auth.signUp({ email, password, options: { data: { username } } });
+        if (error) throw error;
+        if (data.session) { authDialog.close(); return; }
+        setMode('sign-in');
+        setMessage(message, 'Account created. Check your email to confirm your account, then sign in.');
+        return;
+      }
       const { error } = await client.auth.signInWithPassword({ email, password }); if (error) throw error; authDialog.close();
     } catch (error) { setMessage(message, error.message || 'Authentication failed. Please try again.'); }
     finally { authSubmit.disabled = false; }
@@ -98,6 +118,7 @@
     const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo: redirectUrl() });
     setMessage(message, error ? error.message : 'Check your email for a password reset link.');
   });
+  authSignUp.addEventListener('click', () => setMode(mode === 'sign-up' ? 'sign-in' : 'sign-up'));
   googleSignIn.addEventListener('click', async () => {
     const { error } = await client.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: redirectUrl() } });
     if (error) setMessage(message, error.message);

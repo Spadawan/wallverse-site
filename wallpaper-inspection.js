@@ -99,11 +99,19 @@
   }
   async function recordView(wallpaperId) {
     await authReady;
-    const { error } = await client.rpc('record_wallpaper_view', {
+    const { data, error } = await client.rpc('record_wallpaper_view', {
       wallpaper_id_input: wallpaperId,
       session_id_input: currentUser ? null : anonymousViewSession(),
     });
-    if (error) console.warn('View could not be recorded.', error.message);
+    if (error) { console.warn('View could not be recorded.', error.message); return false; }
+    return data === true || String(data || '').toLowerCase() === 'counted';
+  }
+  function refreshInspectionStats() {
+    document.getElementById('inspection-card-stats').replaceChildren(
+      stat('♥', 'Likes', currentWallpaper.likes_count),
+      stat('⇩', 'Downloads', currentWallpaper.downloads_count),
+      stat('visibility', 'Views', currentWallpaper.views_count),
+    );
   }
   async function loadSocialState() {
     await authReady;
@@ -212,9 +220,9 @@
     try {
       const { data, error } = await client.rpc('record_wallpaper_download', { wallpaper_id_input: currentWallpaper.id, quality_input: 'hd' });
       if (error) throw error;
-      if (data === 'counted') {
+      if (String(data || '').toLowerCase() === 'counted') {
         currentWallpaper.downloads_count = (Number(currentWallpaper.downloads_count) || 0) + 1;
-        document.getElementById('inspection-card-stats').replaceChildren(stat('â™¥', 'Likes', currentWallpaper.likes_count), stat('â‡©', 'Downloads', currentWallpaper.downloads_count), stat('visibility', 'Views', currentWallpaper.views_count));
+        refreshInspectionStats();
         window.dispatchEvent(new CustomEvent('wallverse:wallpaper-updated', { detail: { wallpaper: currentWallpaper } }));
       }
     } catch (error) { console.warn('Download could not be recorded.', error); }
@@ -244,7 +252,12 @@
     if (!dialog.open) dialog.showModal();
     await authReady;
     renderAuthState();
-    await Promise.allSettled([recordView(wallpaper.id), loadSocialState(), loadComments(wallpaper.id)]);
+    const [viewResult] = await Promise.allSettled([recordView(wallpaper.id), loadSocialState(), loadComments(wallpaper.id)]);
+    if (currentWallpaper?.id === wallpaper.id && viewResult.status === 'fulfilled' && viewResult.value) {
+      currentWallpaper.views_count = (Number(currentWallpaper.views_count) || 0) + 1;
+      refreshInspectionStats();
+      window.dispatchEvent(new CustomEvent('wallverse:wallpaper-updated', { detail: { wallpaper: currentWallpaper } }));
+    }
   }
   async function toggleLike() {
     if (!currentUser) { dialog.close(); document.getElementById('auth-trigger')?.click(); return; }
