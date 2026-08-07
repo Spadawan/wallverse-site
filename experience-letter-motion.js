@@ -15,7 +15,7 @@
     const letters = [];
     const walker = document.createTreeWalker(target, SHOW_TEXT, {
       acceptNode(node) {
-        return node.parentElement?.closest('.material-symbols-rounded') ? FILTER_REJECT : FILTER_ACCEPT;
+        return node.parentElement?.closest('.material-symbols-rounded, em') ? FILTER_REJECT : FILTER_ACCEPT;
       },
     });
     const nodes = [];
