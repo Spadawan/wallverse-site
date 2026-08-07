@@ -22,9 +22,11 @@
     while (walker.nextNode()) nodes.push(walker.currentNode);
     for (const node of nodes) {
       const fragment = document.createDocumentFragment();
+      const run = document.createElement('span');
+      run.className = 'experience-text-run';
       for (const token of node.textContent.split(/(\s+)/)) {
         if (!token) continue;
-        if (/^\s+$/.test(token)) { fragment.append(document.createTextNode(token)); continue; }
+        if (/^\s+$/.test(token)) { run.append(document.createTextNode(token)); continue; }
         const word = document.createElement('span');
         word.className = 'experience-word';
         for (const character of token) {
@@ -35,8 +37,9 @@
           word.append(letter);
           letters.push(letter);
         }
-        fragment.append(word);
+        run.append(word);
       }
+      fragment.append(run);
       node.replaceWith(fragment);
     }
     target.classList.add('is-letter-reactive');
