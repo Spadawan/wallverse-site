@@ -39,16 +39,19 @@
     render();
     window.dispatchEvent(new Event('wallverse:notifications-updated'));
   }
+  function removeLocal(item) {
+    notifications = notifications.filter((entry) => entry.id !== item.id);
+    render();
+  }
   async function open(item) {
     if (isGift(item)) return;
-    try { await markRead(item); } catch (error) { console.warn('Unable to mark notification as read.', error); }
-    render();
+    try { await markRead(item); removeLocal(item); } catch (error) { console.warn('Unable to mark notification as read.', error); }
     if (item.wallpaper_id) window.location.assign(`/wallpaper/wallpaper-${String(item.wallpaper_id).replace(/-/g, '').slice(0, 8)}`);
   }
   function render() {
     list.replaceChildren();
     readAll.disabled = !notifications.some((item) => !item.is_read);
-    if (!notifications.length) { setStatus('No notifications yet.'); return; }
+    if (!notifications.length) { setStatus('No unread notifications.'); return; }
     setStatus();
     for (const item of notifications) {
       const gift = isGift(item);
@@ -63,7 +66,7 @@
       article.append(icon, copy);
       if (gift) {
         const action = document.createElement('a'); action.className = 'button button--small notification-item__gift-action'; action.href = 'https://play.google.com/store/apps/details?id=app.wallverse.mobile'; action.target = '_blank'; action.rel = 'noopener'; action.textContent = 'Open in Android';
-        action.addEventListener('click', () => { markRead(item).catch(() => {}); });
+        action.addEventListener('click', () => { markRead(item).then(() => removeLocal(item)).catch(() => {}); });
         article.append(action);
       } else {
         const actions = document.createElement('div'); actions.className = 'notification-item__actions';
@@ -80,8 +83,8 @@
     signedOut.hidden = Boolean(user); document.querySelector('.notifications-panel').hidden = !user;
     if (!user) return;
     setStatus('Loading notifications…');
-    let result = await client.from('notifications').select(FULL_SELECT).eq('user_id', user.id).order('created_at', { ascending: false }).limit(80);
-    if (result.error?.code === '42703') result = await client.from('notifications').select(LEGACY_SELECT).eq('user_id', user.id).order('created_at', { ascending: false }).limit(80);
+    let result = await client.from('notifications').select(FULL_SELECT).eq('user_id', user.id).eq('is_read', false).order('created_at', { ascending: false }).limit(80);
+    if (result.error?.code === '42703') result = await client.from('notifications').select(LEGACY_SELECT).eq('user_id', user.id).eq('is_read', false).order('created_at', { ascending: false }).limit(80);
     if (result.error) { setStatus('Notifications are unavailable right now.'); console.warn(result.error); return; }
     notifications = result.data || []; render();
   }
@@ -90,7 +93,7 @@
     try {
       const { error } = await client.from('notifications').update({ is_read: true }).eq('user_id', user.id).eq('is_read', false);
       if (error) throw error;
-      notifications.forEach((item) => { item.is_read = true; }); render(); window.dispatchEvent(new Event('wallverse:notifications-updated'));
+      notifications = []; render(); window.dispatchEvent(new Event('wallverse:notifications-updated'));
     } catch (error) { setStatus(error.message || 'Unable to mark notifications as read.'); readAll.disabled = false; }
   });
   if (client) client.auth.onAuthStateChange(() => window.setTimeout(load, 0));
