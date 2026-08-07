@@ -381,6 +381,15 @@ function renderCreatorSpotlight(profile, bannerUrl, wallpapers) {
   const creator = document.getElementById('creator-spotlight-profile');
   const creatorContent = creatorNode(profile);
   creator.replaceChildren(...creatorContent.childNodes);
+  card.tabIndex = 0;
+  card.setAttribute('role', 'button');
+  card.setAttribute('aria-label', `Open ${profile.username}'s creator profile`);
+  const inspectCreator = (event) => {
+    if (event?.target?.closest('#creator-follow')) return;
+    window.dispatchEvent(new CustomEvent('wallverse:creator-inspect', { detail: { profile } }));
+  };
+  card.onclick = inspectCreator;
+  card.onkeydown = (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); inspectCreator(event); } };
   renderCreatorStats(wallpapers);
   creatorSpotlightProfile = profile;
   refreshCreatorFollow().catch((error) => console.warn('Creator follow status unavailable.', error));
