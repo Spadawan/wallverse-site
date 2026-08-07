@@ -83,9 +83,10 @@
     const render = () => {
       const query = document.getElementById('creator-search').value.trim().toLocaleLowerCase();
       const rarity = document.getElementById('creator-rarity').value;
+      const category = document.getElementById('creator-category').value;
       const filtered = cards.filter((record) => {
         const wallpaper = wallpaperFor(record); const text = [wallpaper.title, wallpaper.category, ...helpers.tagsFor(wallpaper)].filter(Boolean).join(' ').toLocaleLowerCase();
-        return (!query || text.includes(query)) && (rarity === 'all' || tier(wallpaper) === rarity);
+        return (!query || text.includes(query)) && (rarity === 'all' || tier(wallpaper) === rarity) && (category === 'all' || String(wallpaper.category || '').toLocaleLowerCase() === category);
       });
       filtered.sort((left, right) => {
         const a = wallpaperFor(left); const b = wallpaperFor(right);
@@ -138,6 +139,7 @@
     };
     document.getElementById('creator-search').addEventListener('input', render);
     document.getElementById('creator-rarity').addEventListener('change', render);
+    document.getElementById('creator-category').addEventListener('change', render);
     document.querySelectorAll('[data-creator-sort]').forEach((button) => button.addEventListener('click', () => { sort = button.dataset.creatorSort; render(); }));
     load(); return true;
   };

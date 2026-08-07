@@ -33,6 +33,7 @@
         <label class="collection-search"><span class="sr-only">Search this collection</span><span aria-hidden="true">⌕</span><input id="creator-search" type="search" placeholder="Search this collection"></label>
         <div class="collection-sort" role="group" aria-label="Sort collection"><button class="collection-sort__button is-active" data-creator-sort="rare" type="button" aria-pressed="true">Popular &amp; rare</button><button class="collection-sort__button" data-creator-sort="recent" type="button" aria-pressed="false">Recent</button><button class="collection-sort__button" data-creator-sort="downloads" type="button" aria-pressed="false">Downloads</button></div>
         <label class="collection-filter"><span>Rarity</span><select id="creator-rarity"><option value="all">All rarities</option><option value="mythic">Mythic</option><option value="legendary">Legendary</option><option value="epic">Epic</option><option value="rare">Rare</option><option value="uncommon">Uncommon</option><option value="common">Common</option></select></label>
+        <label class="collection-filter"><span>Category</span><select id="creator-category"><option value="all">All categories</option><option value="anime">Anime</option><option value="gaming">Gaming</option><option value="nature">Nature</option><option value="abstract">Abstract</option><option value="fantasy">Fantasy</option><option value="cyberpunk">Cyberpunk</option><option value="space">Space</option><option value="minimalist">Minimalist</option><option value="movies &amp; tv">Movies &amp; TV</option><option value="sport">Sport</option><option value="miscellaneous">Miscellaneous</option></select></label>
       </div>
       <p class="feed-status" id="creator-status" role="status">Loading creator cards…</p>
       <div class="wallpaper-grid" id="creator-grid"></div>
@@ -42,8 +43,8 @@
   <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
   <script src="/site-protection.js?v=suggestive-toggle-1" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-  <script src="/wallverse-data.js?v=deep-link-2" defer></script>
-  <script src="/creator/creator.js?v=deep-link-2" defer></script>
+  <script src="/wallverse-data.js?v=category-1" defer></script>
+  <script src="/creator/creator.js?v=category-1" defer></script>
   <script src="/wallpaper-inspection.js?v=stats-1" defer></script>
   <script src="/wallpaper-routing.js?v=short-links-1" defer></script>
   <script src="/custom-cursor.js?v=3" defer></script>

@@ -292,10 +292,11 @@ function updateFeedSortControls() {
 function renderFeed() {
   const query = document.getElementById('feed-search')?.value.trim().toLocaleLowerCase() || '';
   const rarity = document.getElementById('feed-rarity')?.value || 'all';
+  const category = document.getElementById('feed-category')?.value || 'all';
   const quality = document.getElementById('feed-quality')?.value || 'all';
   const filtered = loadedWallpapers.filter((wallpaper) => {
     const searchable = [wallpaper.title, wallpaper.category, wallpaper.profiles?.username, ...tagsFor(wallpaper)].filter(Boolean).join(' ').toLocaleLowerCase();
-    return (!query || searchable.includes(query)) && (rarity === 'all' || publicCardTier(wallpaper) === rarity) && (quality === 'all' || String(wallpaper.quality || '').toLocaleLowerCase() === quality);
+    return (!query || searchable.includes(query)) && (rarity === 'all' || publicCardTier(wallpaper) === rarity) && (category === 'all' || String(wallpaper.category || '').toLocaleLowerCase() === category) && (quality === 'all' || String(wallpaper.quality || '').toLocaleLowerCase() === quality);
   });
   filtered.sort((left, right) => {
     if (feedSort === 'recent') return new Date(right.created_at || 0) - new Date(left.created_at || 0);
@@ -635,6 +636,7 @@ if (grid && loadMore && spotlightCard) {
   loadMore.addEventListener('click', () => { visibleFeedCount += PAGE_SIZE; renderFeed(); });
   document.getElementById('feed-search').addEventListener('input', renderFeed);
   document.getElementById('feed-rarity').addEventListener('change', renderFeed);
+  document.getElementById('feed-category').addEventListener('change', renderFeed);
   document.getElementById('feed-quality').addEventListener('change', renderFeed);
   document.getElementById('feed-sort-popular').addEventListener('click', () => { feedSort = 'popular'; updateFeedSortControls(); renderFeed(); });
   document.getElementById('feed-sort-recent').addEventListener('click', () => { feedSort = 'recent'; updateFeedSortControls(); renderFeed(); });

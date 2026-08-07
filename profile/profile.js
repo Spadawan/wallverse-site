@@ -225,12 +225,13 @@
   function applyCollectionView() {
     const query = document.getElementById('collection-search').value.trim().toLocaleLowerCase();
     const rarity = document.getElementById('collection-rarity').value;
+    const category = document.getElementById('collection-category').value;
     const quality = document.getElementById('collection-quality').value;
     const filtered = collectionCards.filter((card) => {
       const wallpaper = wallpaperFor(card);
       if (!wallpaper) return false;
       const title = String(wallpaper.title || '').toLocaleLowerCase();
-      return (!query || title.includes(query)) && (rarity === 'all' || cardTier(wallpaper) === rarity) && (quality === 'all' || String(wallpaper.quality || '').toLocaleLowerCase() === quality);
+      return (!query || title.includes(query)) && (rarity === 'all' || cardTier(wallpaper) === rarity) && (category === 'all' || String(wallpaper.category || '').toLocaleLowerCase() === category) && (quality === 'all' || String(wallpaper.quality || '').toLocaleLowerCase() === quality);
     });
     filtered.sort((left, right) => {
       if (collectionSort === 'recent') return new Date(right.acquired_at || 0) - new Date(left.acquired_at || 0);
@@ -272,6 +273,7 @@
   }
   document.getElementById('collection-search').addEventListener('input', applyCollectionView);
   document.getElementById('collection-rarity').addEventListener('change', applyCollectionView);
+  document.getElementById('collection-category').addEventListener('change', applyCollectionView);
   document.getElementById('collection-quality').addEventListener('change', applyCollectionView);
   document.getElementById('collection-sort-popular').addEventListener('click', () => { collectionSort = 'popular'; updateCollectionControls(); applyCollectionView(); });
   document.getElementById('collection-sort-recent').addEventListener('click', () => { collectionSort = 'recent'; updateCollectionControls(); applyCollectionView(); });

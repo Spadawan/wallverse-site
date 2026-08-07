@@ -1,4 +1,9 @@
 (() => {
+  // Numeric constants keep this working in browsers/environments that do not
+  // expose NodeFilter as a global, while retaining the native TreeWalker API.
+  const SHOW_TEXT = 4;
+  const FILTER_ACCEPT = 1;
+  const FILTER_REJECT = 2;
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || window.matchMedia('(pointer: coarse)').matches) return;
 
   const section = document.querySelector('.wallverse-experience');
@@ -10,9 +15,9 @@
     const label = target.textContent.trim().replace(/\s+/g, ' ');
     if (!label) continue;
     target.setAttribute('aria-label', label);
-    const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT, {
+    const walker = document.createTreeWalker(target, SHOW_TEXT, {
       acceptNode(node) {
-        return node.parentElement?.closest('.material-symbols-rounded') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
+        return node.parentElement?.closest('.material-symbols-rounded') ? FILTER_REJECT : FILTER_ACCEPT;
       },
     });
     const nodes = [];
@@ -70,4 +75,5 @@
     if (!frame) frame = window.requestAnimationFrame(animate);
   });
   section.addEventListener('pointerleave', () => { point = null; if (!frame) frame = window.requestAnimationFrame(animate); });
+  window.WallverseExperienceMotion = true;
 })();

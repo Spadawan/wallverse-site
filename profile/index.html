@@ -38,6 +38,7 @@
         <label class="collection-search"><span class="sr-only">Search your collection</span><span aria-hidden="true">⌕</span><input id="collection-search" type="search" placeholder="Search your collection"></label>
         <div class="collection-sort" role="group" aria-label="Sort collection"><button class="collection-sort__button is-active" id="collection-sort-popular" type="button" aria-pressed="true">Popular &amp; rare</button><button class="collection-sort__button" id="collection-sort-recent" type="button" aria-pressed="false">Recent</button></div>
         <label class="collection-filter"><span>Rarity</span><select id="collection-rarity"><option value="all">All rarities</option><option value="mythic">Mythic</option><option value="legendary">Legendary</option><option value="epic">Epic</option><option value="rare">Rare</option><option value="uncommon">Uncommon</option><option value="common">Common</option></select></label>
+        <label class="collection-filter"><span>Category</span><select id="collection-category"><option value="all">All categories</option><option value="anime">Anime</option><option value="gaming">Gaming</option><option value="nature">Nature</option><option value="abstract">Abstract</option><option value="fantasy">Fantasy</option><option value="cyberpunk">Cyberpunk</option><option value="space">Space</option><option value="minimalist">Minimalist</option><option value="movies &amp; tv">Movies &amp; TV</option><option value="sport">Sport</option><option value="miscellaneous">Miscellaneous</option></select></label>
         <label class="collection-filter"><span>Quality</span><select id="collection-quality"><option value="all">All quality</option><option value="premium">Premium</option><option value="high">High</option><option value="standard">Standard</option></select></label>
         <label class="collection-toggle"><input id="collection-suggestive" type="checkbox"><span class="collection-toggle__track" aria-hidden="true"></span><span>Show suggestive</span></label>
       </div>
@@ -50,8 +51,8 @@
   <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
   <script src="/site-protection.js?v=suggestive-toggle-1" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-  <script src="/wallverse-data.js?v=deep-link-2" defer></script>
-  <script src="/profile/profile.js?v=deep-link-2" defer></script>
+  <script src="/wallverse-data.js?v=category-1" defer></script>
+  <script src="/profile/profile.js?v=category-1" defer></script>
   <script src="/wallpaper-inspection.js?v=stats-1" defer></script>
   <script src="/wallpaper-routing.js?v=short-links-1" defer></script>
   <script src="/custom-cursor.js?v=3" defer></script>
