@@ -257,7 +257,15 @@ img { -webkit-user-drag:none; user-select:none; }
 /* Keep the final portrait proportion after the base Card Inspection rule above. */
 .collectible-card,
 .wallpaper-image,
-.creator-dialog-card { aspect-ratio:75/154; }
+.creator-dialog-card { aspect-ratio:75/131; }
+
+/* Keep the inspection card on the same proportion without squashing it to fit. */
+.inspection-card { width:min(350px,calc(65dvh * 75 / 131),100%); max-height:none; aspect-ratio:75/131; }
+@media (max-width:820px) { .inspection-card { width:min(330px,88%); } }
+@media (max-width:520px) { .inspection-card { width:min(285px,88%); } }
+
+/* Center the animated plus independently from its rotating transform. */
+.upload-trigger span { inset:0; width:auto; height:auto; line-height:1; translate:0 -1px; }
 
 /* The moving highlight stays inside the brand frame, with breathing room on its left. */
 .site-header .brand { overflow:hidden; padding-left:11px; }
