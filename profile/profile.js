@@ -35,6 +35,7 @@
   const compact = (value) => new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(Number(value) || 0);
   const r2Url = (key) => `${config.r2PublicBaseUrl.replace(/\/+$/, '')}/${String(key || '').replace(/^\/+/, '').split('/').map(encodeURIComponent).join('/')}`;
   const thumbnail = (wallpaper) => wallpaper.storage_provider === 'cloudflare_r2' && wallpaper.thumbnail_storage_key ? r2Url(wallpaper.thumbnail_storage_key) : (wallpaper.thumbnail_url || '');
+  const wallpaperPath = (wallpaper) => window.WallverseCards?.wallpaperPath?.(wallpaper) || '/';
   function cardScore(wallpaper) {
     const quality = String(wallpaper.quality || '').toLowerCase();
     const qualityScore = quality === 'premium' ? 180 : quality === 'high' ? 90 : quality === 'standard' ? 30 : 0;
@@ -199,8 +200,8 @@
       const tier = cardTier(wallpaper);
       const frame = String(ownedCard.card_frame_type || ownedCard.card_frame_id || 'default').replace(/[^A-Za-z]/g, '').toLowerCase() || 'default';
       const polished = wallpaper.polished_until && new Date(wallpaper.polished_until) > new Date();
-      const card = document.createElement('article'); card.className = `collectible-card tier--${tier} frame--${frame}${polished ? ' is-polished' : ''}`;
-      card.setAttribute('role', 'button'); card.tabIndex = 0;
+      const card = document.createElement('a'); card.className = `collectible-card tier--${tier} frame--${frame}${polished ? ' is-polished' : ''}`;
+      card.href = wallpaperPath(wallpaper);
       card.setAttribute('aria-label', `Open ${wallpaper.title || 'Untitled card'}, ${tier} rarity, ${Number(wallpaper.likes_count) || 0} likes, ${Number(wallpaper.downloads_count) || 0} downloads, ${Number(wallpaper.views_count) || 0} views`);
       const imageBox = document.createElement('div'); imageBox.className = 'collectible-card__media';
       const source = thumbnail(wallpaper);
@@ -213,8 +214,7 @@
       stats.append(cardStat('♥', 'Likes', wallpaper.likes_count), cardStat('↧', 'Downloads', wallpaper.downloads_count), cardStat('visibility', 'Views', wallpaper.views_count));
       info.append(title, stats); imageBox.append(surface, shine, info); card.append(imageBox);
       const inspect = () => window.dispatchEvent(new CustomEvent('wallverse:inspect', { detail: { wallpaper } }));
-      card.addEventListener('click', inspect);
-      card.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); inspect(); } });
+      card.addEventListener('click', (event) => { event.preventDefault(); inspect(); });
       observeCollectionCard(card); enableCardMotion(card); return card;
     }));
     status.textContent = matchingCount ? `Showing ${cards.length} of ${matchingCount} cards` : 'No cards match these filters.';

@@ -54,8 +54,8 @@
     const renderCard = (record) => {
       const wallpaper = wallpaperFor(record); const rarity = tier(wallpaper);
       const polished = wallpaper.polished_until && new Date(wallpaper.polished_until) > new Date();
-      const card = document.createElement('article'); card.className = `collectible-card tier--${rarity}${polished ? ' is-polished' : ''}`;
-      card.setAttribute('role', 'button'); card.tabIndex = 0;
+      const card = document.createElement('a'); card.className = `collectible-card tier--${rarity}${polished ? ' is-polished' : ''}`;
+      card.href = helpers.wallpaperPath(wallpaper);
       card.setAttribute('aria-label', `Open ${wallpaper.title || 'Untitled card'}, ${rarity} rarity`);
       const media = document.createElement('div'); media.className = 'collectible-card__media';
       const source = helpers.thumbnailUrl(wallpaper);
@@ -71,8 +71,7 @@
       stats.append(cardStat('♥', 'Likes', wallpaper.likes_count), cardStat('⇩', 'Downloads', wallpaper.downloads_count), cardStat('visibility', 'Views', wallpaper.views_count));
       info.append(title, stats); media.append(surface, shine, info); card.append(media);
       const inspect = () => window.dispatchEvent(new CustomEvent('wallverse:inspect', { detail: { wallpaper } }));
-      card.addEventListener('click', inspect);
-      card.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); inspect(); } });
+      card.addEventListener('click', (event) => { event.preventDefault(); inspect(); });
       helpers.enablePublicCardMotion(card); observe(card); return card;
     };
     const setSortControls = () => document.querySelectorAll('[data-creator-sort]').forEach((button) => {

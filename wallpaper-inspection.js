@@ -285,7 +285,12 @@
   }
 
   helpers.enablePublicCardMotion(card);
-  window.addEventListener('wallverse:inspect', (event) => { if (event.detail?.wallpaper) openInspection(event.detail.wallpaper); });
+  window.WallverseInspection = { open: openInspection, close: () => dialog.close(), isOpen: () => dialog.open };
+  window.addEventListener('wallverse:inspect', (event) => {
+    if (!event.detail?.wallpaper) return;
+    if (window.WallverseWallpaperRouter?.navigate) window.WallverseWallpaperRouter.navigate(event.detail.wallpaper);
+    else openInspection(event.detail.wallpaper);
+  });
   likeButton.addEventListener('click', toggleLike); favoriteButton.addEventListener('click', toggleFavorite); commentForm.addEventListener('submit', postComment);
   downloadButton.addEventListener('click', openDownloadGate);
   downloadConfirm.addEventListener('click', confirmDownload);
@@ -295,6 +300,6 @@
   signInButton.addEventListener('click', () => { dialog.close(); document.getElementById('auth-trigger')?.click(); });
   document.querySelector('[data-close-inspection]').addEventListener('click', () => dialog.close());
   dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });
-  dialog.addEventListener('close', () => { if (downloadDialog.open) downloadDialog.close(); });
+  dialog.addEventListener('close', () => { if (downloadDialog.open) downloadDialog.close(); window.WallverseWallpaperRouter?.onInspectionClosed?.(); });
   client.auth.onAuthStateChange((_event, session) => { currentUser = session?.user || null; renderAuthState(); if (dialog.open) loadSocialState(); });
 })();
