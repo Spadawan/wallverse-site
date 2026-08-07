@@ -10,6 +10,9 @@ const FEATURED_SELECT = SELECT;
 const CREATOR_STATS_SELECT = 'id,quality,likes_count,downloads_count,views_count,is_featured,is_weekly';
 const PAGE_SIZE = 12;
 const FEED_CATALOG_PAGE_SIZE = 1000;
+const AD_CARD_INTERVAL = 18;
+const ADSENSE_CLIENT = 'ca-pub-6482601365294880';
+const ADSENSE_SLOT = '5502068644';
 const PUBLIC_CATALOG_CACHE_TTL = 10 * 60 * 1000;
 const PUBLIC_CATALOG_CACHE_MAX_AGE = 24 * 60 * 60 * 1000;
 const PUBLIC_CATALOG_CACHE_KEY = 'wallverse:public-catalog:v1:safe';
@@ -216,6 +219,56 @@ function renderCard(wallpaper) {
   return card;
 }
 
+function collapseAdCard(card) {
+  if (!card || card.dataset.collapsed === 'true') return;
+  card.dataset.collapsed = 'true';
+  card.remove();
+}
+
+function initializeAdCard(card, slot) {
+  const hideIfUnfilled = () => {
+    if (slot.dataset.adStatus === 'unfilled') {
+      observer.disconnect();
+      collapseAdCard(card);
+    }
+  };
+  const observer = new MutationObserver(hideIfUnfilled);
+  observer.observe(slot, { attributes: true, attributeFilter: ['data-ad-status'] });
+  hideIfUnfilled();
+
+  requestAnimationFrame(() => {
+    if (!card.isConnected || card.dataset.collapsed === 'true') return;
+    try {
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    } catch {
+      // A failed third-party ad request must never leave an empty wallpaper slot.
+      collapseAdCard(card);
+    }
+  });
+}
+
+function renderAdCard() {
+  const card = document.createElement('aside');
+  card.className = 'ad-card';
+  card.setAttribute('aria-label', 'Sponsored advertisement');
+
+  const label = document.createElement('span');
+  label.className = 'ad-card__label';
+  label.textContent = 'Sponsored';
+
+  const slot = document.createElement('ins');
+  slot.className = 'adsbygoogle';
+  slot.setAttribute('style', 'display:block');
+  slot.dataset.adClient = ADSENSE_CLIENT;
+  slot.dataset.adSlot = ADSENSE_SLOT;
+  slot.dataset.adFormat = 'auto';
+  slot.dataset.fullWidthResponsive = 'true';
+
+  card.append(label, slot);
+  initializeAdCard(card, slot);
+  return card;
+}
+
 const feedTierRank = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4, mythic: 5 };
 function updateFeedSortControls() {
   const popular = document.getElementById('feed-sort-popular'); const recent = document.getElementById('feed-sort-recent');
@@ -236,7 +289,12 @@ function renderFeed() {
   });
   const visible = filtered.slice(0, visibleFeedCount);
   idleObserver?.disconnect();
-  grid.replaceChildren(...visible.map(renderCard));
+  const feedItems = [];
+  visible.forEach((wallpaper, index) => {
+    feedItems.push(renderCard(wallpaper));
+    if ((index + 1) % AD_CARD_INTERVAL === 0) feedItems.push(renderAdCard());
+  });
+  grid.replaceChildren(...feedItems);
   status.textContent = filtered.length ? `Showing ${visible.length} of ${filtered.length} public wallpapers` : 'No public wallpapers match these filters.';
   status.hidden = false;
   loadMore.hidden = visible.length >= filtered.length;

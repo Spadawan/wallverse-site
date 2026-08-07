@@ -165,6 +165,13 @@ img { -webkit-user-drag:none; user-select:none; }
 /* Public feed: the same Card Inspection language, with compact creator details. */
 #wallpaper-grid { grid-template-columns:repeat(4,minmax(0,1fr)); gap:24px 20px; perspective:1200px; }
 .collectible-card--public { min-width:0; }
+.ad-card { position:relative; isolation:isolate; display:grid; grid-template-rows:auto minmax(0,1fr); min-width:0; aspect-ratio:75/131; overflow:hidden; padding:13px; border:1.5px solid rgba(122,156,202,.26); border-radius:30px; background:radial-gradient(circle at 22% 8%,rgba(40,243,255,.1),transparent 31%),radial-gradient(circle at 88% 91%,rgba(155,92,255,.12),transparent 42%),linear-gradient(145deg,rgba(18,34,61,.92),rgba(5,11,24,.98)); box-shadow:0 22px 38px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.06),0 0 20px rgba(40,243,255,.06); }
+.ad-card::before { position:absolute; z-index:-1; inset:7px; border:1px solid rgba(198,246,255,.1); border-radius:21px; content:''; pointer-events:none; }
+.ad-card__label { justify-self:start; margin:1px 1px 10px; padding:4px 7px; border:1px solid rgba(198,246,255,.18); border-radius:999px; color:#b7c5d8; background:rgba(5,12,27,.7); font-size:.58rem; font-weight:900; letter-spacing:.08em; line-height:1; text-transform:uppercase; }
+.ad-card .adsbygoogle { align-self:stretch; width:100%; min-width:0; overflow:hidden; border-radius:15px; }
+.ad-card .adsbygoogle[data-ad-status="unfilled"] { display:none !important; }
+@media (max-width:760px) { .ad-card { padding:10px; border-radius:24px; }.ad-card::before { inset:5px; border-radius:18px; }.ad-card__label { margin-bottom:7px; }.ad-card .adsbygoogle { border-radius:13px; } }
+@media (prefers-reduced-motion:reduce) { .ad-card { transition:none; } }
 .collectible-card__badges { position:absolute; z-index:3; top:11px; left:11px; display:flex; flex-wrap:wrap; gap:6px; max-width:calc(100% - 22px); }
 .collectible-card__badges .pill,.collectible-card__badges .tag { padding:5px 7px; border:1px solid rgba(255,255,255,.22); border-radius:999px; color:#f7fbff; background:rgba(5,12,26,.7); box-shadow:0 5px 14px rgba(0,0,0,.28); font-size:.59rem; font-weight:900; letter-spacing:.06em; text-transform:uppercase; backdrop-filter:blur(8px); }
 .collectible-card__badges .tag { color:#bdeff4; }
