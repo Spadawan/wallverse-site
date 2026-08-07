@@ -86,7 +86,7 @@
     let offset = 0;
     while (true) {
       let request = client.from('user_cards')
-        .select('id,acquired_at,card_frame_id,card_frame_type,archived,wallpapers!inner(id,user_id,title,description,thumbnail_url,category,quality,width,height,file_size,likes_count,downloads_count,views_count,is_featured,is_weekly,polished_until,status,is_suggestive,storage_provider,thumbnail_storage_key,profiles!wallpapers_user_id_fkey(username,avatar_url),wallpaper_tags(tags(name)))')
+        .select('id,acquired_at,card_frame_id,card_frame_type,archived,wallpapers!inner(id,user_id,title,description,image_url,thumbnail_url,category,quality,width,height,file_size,likes_count,downloads_count,views_count,is_featured,is_weekly,polished_until,status,is_suggestive,storage_provider,thumbnail_storage_key,hd_storage_key,profiles!wallpapers_user_id_fkey(username,avatar_url),wallpaper_tags(tags(name)))')
         .eq('owner_id', ownerId)
         .eq('wallpapers.status', 'approved')
         .order('acquired_at', { ascending: false })

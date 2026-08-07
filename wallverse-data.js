@@ -4,7 +4,7 @@ const WALLVERSE_PUBLIC_CONFIG = {
   r2PublicBaseUrl: 'https://images.wallverse.win',
 };
 
-const SELECT = 'id,user_id,title,description,thumbnail_url,category,quality,width,height,file_size,likes_count,downloads_count,views_count,is_ai,is_suggestive,is_weekly,is_featured,polished_until,created_at,storage_provider,thumbnail_storage_key,profiles!wallpapers_user_id_fkey(username,avatar_url),wallpaper_tags(tags(name))';
+const SELECT = 'id,user_id,title,description,image_url,thumbnail_url,category,quality,width,height,file_size,likes_count,downloads_count,views_count,is_ai,is_suggestive,is_weekly,is_featured,polished_until,created_at,storage_provider,thumbnail_storage_key,hd_storage_key,profiles!wallpapers_user_id_fkey(username,avatar_url),wallpaper_tags(tags(name))';
 const SPOTLIGHT_SELECT = 'id,title,image_url,thumbnail_url,category,quality,is_weekly,is_featured,storage_provider,thumbnail_storage_key,hd_storage_key,profiles!wallpapers_user_id_fkey(username,avatar_url),wallpaper_tags(tags(name))';
 const FEATURED_SELECT = SELECT;
 const CREATOR_STATS_SELECT = 'id,quality,likes_count,downloads_count,views_count,is_featured,is_weekly';
@@ -15,7 +15,7 @@ const ADSENSE_CLIENT = 'ca-pub-6482601365294880';
 const ADSENSE_SLOT = '5502068644';
 const PUBLIC_CATALOG_CACHE_TTL = 10 * 60 * 1000;
 const PUBLIC_CATALOG_CACHE_MAX_AGE = 24 * 60 * 60 * 1000;
-const PUBLIC_CATALOG_CACHE_KEY = 'wallverse:public-catalog:v1:safe';
+const PUBLIC_CATALOG_CACHE_KEY = 'wallverse:public-catalog:v2:safe';
 const SYSTEM_TAGS = new Set(['ai-generated', 'ai', 'suggestive']);
 const apiHeaders = {
   apikey: WALLVERSE_PUBLIC_CONFIG.supabaseAnonKey,
@@ -87,6 +87,12 @@ function spotlightUrl(wallpaper) {
   if (!wallpaper) return '';
   if (wallpaper.storage_provider === 'cloudflare_r2' && wallpaper.hd_storage_key) return r2Url(wallpaper.hd_storage_key);
   return wallpaper.image_url || thumbnailUrl(wallpaper);
+}
+
+function downloadUrl(wallpaper) {
+  if (!wallpaper) return '';
+  if (wallpaper.storage_provider === 'cloudflare_r2' && wallpaper.hd_storage_key) return r2Url(wallpaper.hd_storage_key);
+  return wallpaper.image_url || '';
 }
 
 function tagsFor(wallpaper) {
@@ -638,5 +644,5 @@ if (grid && loadMore && spotlightCard) {
   initialize();
 }
 
-window.WallverseCards = { thumbnailUrl, tagsFor, qualityLabel, compactNumber, publicCardScore, publicCardTier, enablePublicCardMotion, createAdCard: renderAdCard, adCardInterval: AD_CARD_INTERVAL };
+window.WallverseCards = { thumbnailUrl, downloadUrl, tagsFor, qualityLabel, compactNumber, publicCardScore, publicCardTier, enablePublicCardMotion, createAdCard: renderAdCard, adCardInterval: AD_CARD_INTERVAL };
 window.dispatchEvent(new Event('wallverse:data-ready'));

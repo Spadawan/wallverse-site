@@ -12,6 +12,7 @@
   const image = document.getElementById('inspection-image');
   const likeButton = document.getElementById('inspection-like');
   const favoriteButton = document.getElementById('inspection-favorite');
+  const downloadButton = document.getElementById('inspection-download');
   const commentForm = document.getElementById('inspection-comment-form');
   const signInButton = document.getElementById('inspection-sign-in');
   const message = document.getElementById('inspection-message');
@@ -20,6 +21,16 @@
   let liked = false;
   let favorited = false;
   let socialBusy = false;
+  let downloadTimer = null;
+  let downloadAdInitialized = false;
+
+  const downloadDialog = document.createElement('dialog');
+  downloadDialog.className = 'download-ad-dialog';
+  downloadDialog.setAttribute('aria-labelledby', 'download-ad-title');
+  downloadDialog.innerHTML = `<button class="dialog-close download-ad-dialog__close" type="button" data-close-download-ad aria-label="Cancel download">×</button><div class="download-ad-dialog__body"><p class="highlight-label">SPONSORED DOWNLOAD</p><h2 id="download-ad-title">Unlock HD Download</h2><p>This short sponsored message helps keep Wallverse free.</p><div class="download-ad-dialog__ad"><span>Advertisement</span><ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-6482601365294880" data-ad-slot="9142050893" data-ad-format="auto" data-full-width-responsive="true"></ins></div><p class="download-ad-dialog__status" id="download-ad-status" role="status" aria-live="polite">Download available in 5…</p><div class="download-ad-dialog__actions"><button class="text-button" type="button" data-close-download-ad>Cancel</button><button class="button" id="download-ad-confirm" type="button" disabled>Download HD</button></div></div>`;
+  document.body.append(downloadDialog);
+  const downloadStatus = downloadDialog.querySelector('#download-ad-status');
+  const downloadConfirm = downloadDialog.querySelector('#download-ad-confirm');
 
   const authReady = client.auth.getUser().then(({ data }) => {
     currentUser = data.user || null;
@@ -129,6 +140,65 @@
     ];
     document.getElementById('inspection-facts').replaceChildren(...facts.map(([label, value]) => { const group = document.createElement('div'); const term = document.createElement('dt'); const detail = document.createElement('dd'); term.textContent = label; detail.textContent = value; group.append(term, detail); return group; }));
     liked = false; favorited = false; renderAuthState(); setMessage();
+    downloadButton.disabled = false;
+    downloadButton.removeAttribute('aria-disabled');
+    downloadButton.title = 'Unlock an HD download';
+    downloadButton.querySelector('strong').textContent = 'Download';
+    downloadButton.querySelector('small').textContent = 'HD';
+  }
+
+  function clearDownloadCountdown() {
+    if (downloadTimer) window.clearInterval(downloadTimer);
+    downloadTimer = null;
+  }
+  function initializeDownloadAd() {
+    if (downloadAdInitialized) return;
+    downloadAdInitialized = true;
+    requestAnimationFrame(() => {
+      try { (window.adsbygoogle = window.adsbygoogle || []).push({}); }
+      catch (error) { console.warn('Download ad could not be initialized.', error); }
+    });
+  }
+  function startDownloadCountdown() {
+    clearDownloadCountdown();
+    let remaining = 5;
+    downloadConfirm.disabled = true;
+    downloadStatus.textContent = `Download available in ${remaining}…`;
+    downloadTimer = window.setInterval(() => {
+      remaining -= 1;
+      if (remaining > 0) { downloadStatus.textContent = `Download available in ${remaining}…`; return; }
+      clearDownloadCountdown();
+      downloadStatus.textContent = 'Ready to download';
+      downloadConfirm.disabled = false;
+    }, 1000);
+  }
+  function openDownloadGate() {
+    if (!currentWallpaper) return;
+    if (!downloadDialog.open) downloadDialog.showModal();
+    initializeDownloadAd();
+    startDownloadCountdown();
+  }
+  async function confirmDownload() {
+    if (!currentWallpaper) return;
+    const url = helpers.downloadUrl(currentWallpaper);
+    if (!url) { downloadStatus.textContent = 'HD download is unavailable for this wallpaper.'; return; }
+    downloadConfirm.disabled = true;
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `wallverse-${currentWallpaper.id}-hd`;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    document.body.append(link); link.click(); link.remove();
+    try {
+      const { data, error } = await client.rpc('record_wallpaper_download', { wallpaper_id_input: currentWallpaper.id, quality_input: 'hd' });
+      if (error) throw error;
+      if (data === 'counted') {
+        currentWallpaper.downloads_count = (Number(currentWallpaper.downloads_count) || 0) + 1;
+        document.getElementById('inspection-card-stats').replaceChildren(stat('â™¥', 'Likes', currentWallpaper.likes_count), stat('â‡©', 'Downloads', currentWallpaper.downloads_count), stat('visibility', 'Views', currentWallpaper.views_count));
+        window.dispatchEvent(new CustomEvent('wallverse:wallpaper-updated', { detail: { wallpaper: currentWallpaper } }));
+      }
+    } catch (error) { console.warn('Download could not be recorded.', error); }
+    downloadStatus.textContent = 'Thanks for supporting Wallverse ❤️';
   }
   async function loadComments(wallpaperId) {
     const list = document.getElementById('inspection-comment-list'); list.replaceChildren();
@@ -197,8 +267,14 @@
   helpers.enablePublicCardMotion(card);
   window.addEventListener('wallverse:inspect', (event) => { if (event.detail?.wallpaper) openInspection(event.detail.wallpaper); });
   likeButton.addEventListener('click', toggleLike); favoriteButton.addEventListener('click', toggleFavorite); commentForm.addEventListener('submit', postComment);
+  downloadButton.addEventListener('click', openDownloadGate);
+  downloadConfirm.addEventListener('click', confirmDownload);
+  downloadDialog.querySelectorAll('[data-close-download-ad]').forEach((button) => button.addEventListener('click', () => downloadDialog.close()));
+  downloadDialog.addEventListener('close', clearDownloadCountdown);
+  downloadDialog.addEventListener('click', (event) => { if (event.target === downloadDialog) downloadDialog.close(); });
   signInButton.addEventListener('click', () => { dialog.close(); document.getElementById('auth-trigger')?.click(); });
   document.querySelector('[data-close-inspection]').addEventListener('click', () => dialog.close());
   dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });
+  dialog.addEventListener('close', () => { if (downloadDialog.open) downloadDialog.close(); });
   client.auth.onAuthStateChange((_event, session) => { currentUser = session?.user || null; renderAuthState(); if (dialog.open) loadSocialState(); });
 })();
