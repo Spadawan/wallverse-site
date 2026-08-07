@@ -19,6 +19,8 @@
     let observer;
 
     const compact = helpers.compactNumber;
+    const createAdCard = helpers.createAdCard;
+    const adCardInterval = helpers.adCardInterval || 12;
     const wallpaperFor = (card) => Array.isArray(card?.wallpapers) ? card.wallpapers[0] : (card?.wallpapers || card);
     const cardScore = helpers.publicCardScore;
     const tier = helpers.publicCardTier;
@@ -89,7 +91,13 @@
         if (sort === 'downloads') return (Number(b.downloads_count) || 0) - (Number(a.downloads_count) || 0);
         return tierRank[tier(b)] - tierRank[tier(a)] || cardScore(b) - cardScore(a) || new Date(b.created_at || 0) - new Date(a.created_at || 0);
       });
-      observer?.disconnect(); grid.replaceChildren(...filtered.slice(0, 60).map(renderCard));
+      const cardsToShow = filtered.slice(0, 60);
+      const gridItems = [];
+      cardsToShow.forEach((record, index) => {
+        gridItems.push(renderCard(record));
+        if ((index + 1) % adCardInterval === 0 && createAdCard) gridItems.push(createAdCard());
+      });
+      observer?.disconnect(); grid.replaceChildren(...gridItems);
       status.textContent = filtered.length ? `Showing ${Math.min(filtered.length, 60)} of ${filtered.length} public cards` : 'No public cards match these filters.';
       setSortControls();
     };

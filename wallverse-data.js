@@ -247,9 +247,9 @@ function initializeAdCard(card, slot) {
   });
 }
 
-function renderAdCard() {
+function renderAdCard(variant = 'grid') {
   const card = document.createElement('aside');
-  card.className = 'ad-card';
+  card.className = `ad-card${variant === 'wide' ? ' ad-card--wide' : ''}`;
   card.setAttribute('aria-label', 'Sponsored advertisement');
 
   const label = document.createElement('span');
@@ -638,5 +638,5 @@ if (grid && loadMore && spotlightCard) {
   initialize();
 }
 
-window.WallverseCards = { thumbnailUrl, tagsFor, qualityLabel, compactNumber, publicCardScore, publicCardTier, enablePublicCardMotion };
+window.WallverseCards = { thumbnailUrl, tagsFor, qualityLabel, compactNumber, publicCardScore, publicCardTier, enablePublicCardMotion, createAdCard: renderAdCard, adCardInterval: AD_CARD_INTERVAL };
 window.dispatchEvent(new Event('wallverse:data-ready'));
