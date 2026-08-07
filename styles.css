@@ -96,7 +96,8 @@ footer { display:grid; grid-template-columns:1fr auto; gap:28px; padding-top:34p
 @media (max-width:760px) { .profile-page { padding-top:26px; padding-bottom:64px; }.profile-hero { min-height:360px; align-items:start; flex-direction:column; padding:24px; }.profile-hero__avatar { width:82px; height:82px; flex-basis:82px; font-size:1.5rem; }.profile-hero__identity { align-items:flex-start; gap:15px; }.profile-hero__power { justify-items:start; }.profile-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }.profile-wallpapers { padding-top:56px; } }
 
 /* Current homepage and profile refinements */
-.featured-card { opacity:1; transition:opacity .32s ease,transform .32s ease,border-color .25s ease; }.featured-card.is-switching { opacity:0; transform:scale(.985); }
+.featured-card { opacity:1; transform-style:preserve-3d; transition:transform .32s ease,border-color .25s ease,box-shadow .25s ease; }.featured-card.is-flipping { pointer-events:none; will-change:transform; animation:featured-card-flip .76s cubic-bezier(.35,.02,.2,1) both; }
+@keyframes featured-card-flip { 0% { transform:perspective(1100px) rotateY(0) scale(1); } 48% { transform:perspective(1100px) rotateY(90deg) scale(.965); } 52% { transform:perspective(1100px) rotateY(90deg) scale(.965); } 100% { transform:perspective(1100px) rotateY(0) scale(1); } }
 .spotlight-card[role="button"],.featured-card[role="button"] { cursor:pointer; }
 .spotlight-card[role="button"]:focus-visible,.featured-card[role="button"]:focus-visible { outline:2px solid var(--cyan); outline-offset:4px; }
 

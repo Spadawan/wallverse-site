@@ -392,37 +392,44 @@ async function loadSpotlight() {
   renderSpotlight(featured[0], false);
 }
 
-function renderFeatured(wallpapers) {
-  const cards = [...document.querySelectorAll('.featured-card')];
-  const imagesReady = wallpapers.map((wallpaper) => new Promise((resolve) => {
+function preloadFeaturedImage(wallpaper) {
+  return new Promise((resolve) => {
     if (!wallpaper) return resolve();
     const preloaded = new Image();
-    preloaded.onload = () => resolve();
-    preloaded.onerror = () => resolve();
+    preloaded.onload = resolve;
+    preloaded.onerror = resolve;
     preloaded.src = thumbnailUrl(wallpaper);
-  }));
-  return Promise.all(imagesReady).then(() => {
-    cards.forEach((card) => card.classList.add('is-switching'));
-    return new Promise((resolve) => window.setTimeout(resolve, 180));
-  }).then(() => {
-    cards.forEach((card, index) => {
-    const wallpaper = wallpapers[index];
-    const image = card.querySelector('img');
-    const title = card.querySelector('h2');
-    if (!wallpaper) { card.hidden = true; return; }
-    image.src = thumbnailUrl(wallpaper);
-    image.alt = wallpaper.title ? `${wallpaper.title} wallpaper` : 'Featured Wallverse wallpaper';
-    image.onerror = () => { card.hidden = true; };
-    title.textContent = wallpaper.title || 'Untitled wallpaper';
-    card.tabIndex = 0;
-    card.setAttribute('role', 'button');
-    card.setAttribute('aria-label', `Open ${wallpaper.title || 'this featured wallpaper'} details`);
-    const inspect = () => window.dispatchEvent(new CustomEvent('wallverse:inspect', { detail: { wallpaper } }));
-    card.onclick = inspect;
-    card.onkeydown = (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); inspect(); } };
-    card.hidden = false;
-    });
-    window.requestAnimationFrame(() => cards.forEach((card) => card.classList.remove('is-switching')));
+  });
+}
+function applyFeaturedCard(card, wallpaper) {
+  const image = card.querySelector('img');
+  const title = card.querySelector('h2');
+  if (!wallpaper) { card.hidden = true; return; }
+  image.src = thumbnailUrl(wallpaper);
+  image.alt = wallpaper.title ? `${wallpaper.title} wallpaper` : 'Featured Wallverse wallpaper';
+  image.onerror = () => { card.hidden = true; };
+  title.textContent = wallpaper.title || 'Untitled wallpaper';
+  card.tabIndex = 0;
+  card.setAttribute('role', 'button');
+  card.setAttribute('aria-label', `Open ${wallpaper.title || 'this featured wallpaper'} details`);
+  const inspect = () => window.dispatchEvent(new CustomEvent('wallverse:inspect', { detail: { wallpaper } }));
+  card.onclick = inspect;
+  card.onkeydown = (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); inspect(); } };
+  card.hidden = false;
+}
+async function renderFeaturedCard(card, wallpaper, { animate = false } = {}) {
+  await preloadFeaturedImage(wallpaper);
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!animate || reduceMotion) { applyFeaturedCard(card, wallpaper); return; }
+  card.classList.add('is-flipping');
+  await new Promise((resolve) => window.setTimeout(resolve, 380));
+  applyFeaturedCard(card, wallpaper);
+  await new Promise((resolve) => window.setTimeout(resolve, 380));
+  card.classList.remove('is-flipping');
+}
+function renderFeatured(wallpapers, options) {
+  const cards = [...document.querySelectorAll('.featured-card')];
+  return Promise.all(cards.map((card, index) => renderFeaturedCard(card, wallpapers[index], options))).then(() => {
     document.getElementById('featured-grid').setAttribute('aria-busy', 'false');
   });
 }
@@ -438,17 +445,23 @@ async function loadFeatured() {
     }
   }
   if (!unique.length) { document.getElementById('featured-grid').hidden = true; return; }
-  let visibleIndex = 0;
-  let swapping = false;
-  const display = async () => {
-    if (swapping) return;
-    swapping = true;
-    await renderFeatured([unique[visibleIndex], unique[(visibleIndex + 1) % unique.length]]);
-    visibleIndex = (visibleIndex + 2) % unique.length;
-    swapping = false;
+  const indices = [0, 1 % unique.length];
+  const featuredCards = [...document.querySelectorAll('.featured-card')];
+  const switching = [false, false];
+  await renderFeatured([unique[indices[0]], unique[indices[1]]]);
+  if (unique.length <= 2) return;
+  const rotateCard = async (cardIndex) => {
+    if (switching[cardIndex]) return;
+    switching[cardIndex] = true;
+    indices[cardIndex] = (indices[cardIndex] + 2) % unique.length;
+    await renderFeaturedCard(featuredCards[cardIndex], unique[indices[cardIndex]], { animate: true });
+    switching[cardIndex] = false;
   };
-  await display();
-  if (unique.length > 2) window.setInterval(display, 6000);
+  window.setInterval(() => rotateCard(0), 6200);
+  window.setTimeout(() => {
+    rotateCard(1);
+    window.setInterval(() => rotateCard(1), 6200);
+  }, 3100);
 }
 
 function renderCreatorStats(wallpapers) {
