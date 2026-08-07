@@ -89,6 +89,10 @@
     const viewer = inspection();
     if (!viewer?.open) return;
     hideNotFound();
+    const canonicalPath = wallpaperPath(wallpaper);
+    if (`${window.location.pathname}${window.location.search}` !== canonicalPath) {
+      history.replaceState({ ...(history.state || {}), wallverseWallpaper: true, wallpaperId: wallpaper.id }, '', canonicalPath);
+    }
     updateSeo(wallpaper);
     viewer.open(wallpaper);
   }
