@@ -243,6 +243,7 @@
     document.documentElement.dataset.authenticated = user ? 'true' : 'false';
     document.getElementById('profile-sign-in').hidden = Boolean(user);
     document.getElementById('profile-sign-out').hidden = !user;
+    document.getElementById('profile-upload').hidden = !user;
     wallpapersSection.hidden = !user; signedOut.hidden = Boolean(user);
     if (!user) { showSuggestive = false; updateCollectionControls(); hero.hidden = true; return; }
     hero.hidden = false; hero.setAttribute('aria-busy', 'true');
