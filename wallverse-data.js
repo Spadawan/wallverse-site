@@ -279,6 +279,15 @@ function renderSpotlight(wallpaper, weekly) {
   const creatorContent = creatorNode(wallpaper.profiles);
   creator.replaceChildren();
   if (creatorContent) { creator.append(...creatorContent.childNodes); creator.hidden = false; }
+  spotlightCard.tabIndex = 0;
+  spotlightCard.setAttribute('role', 'button');
+  spotlightCard.setAttribute('aria-label', `Open ${wallpaper.title || 'this wallpaper'} details`);
+  const inspect = (event) => {
+    if (event?.target?.closest('button')) return;
+    window.dispatchEvent(new CustomEvent('wallverse:inspect', { detail: { wallpaper } }));
+  };
+  spotlightCard.onclick = inspect;
+  spotlightCard.onkeydown = (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); inspect(event); } };
   spotlightCard.setAttribute('aria-busy', 'false');
 }
 
@@ -312,6 +321,12 @@ function renderFeatured(wallpapers) {
     image.alt = wallpaper.title ? `${wallpaper.title} wallpaper` : 'Featured Wallverse wallpaper';
     image.onerror = () => { card.hidden = true; };
     title.textContent = wallpaper.title || 'Untitled wallpaper';
+    card.tabIndex = 0;
+    card.setAttribute('role', 'button');
+    card.setAttribute('aria-label', `Open ${wallpaper.title || 'this featured wallpaper'} details`);
+    const inspect = () => window.dispatchEvent(new CustomEvent('wallverse:inspect', { detail: { wallpaper } }));
+    card.onclick = inspect;
+    card.onkeydown = (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); inspect(); } };
     card.hidden = false;
     });
     window.requestAnimationFrame(() => cards.forEach((card) => card.classList.remove('is-switching')));
