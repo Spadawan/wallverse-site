@@ -1,10 +1,12 @@
 (() => {
   const client = window.WallverseSupabase;
   const badges = [...document.querySelectorAll('[data-notifications-badge]')];
+  const triggers = [...document.querySelectorAll('.notification-trigger')];
   if (!client || !badges.length) return;
   const paint = (count) => badges.forEach((badge) => { badge.hidden = !count; badge.textContent = count > 99 ? '99+' : String(count); });
   async function refresh() {
     const { data: sessionData } = await client.auth.getSession(); const user = sessionData.session?.user;
+    triggers.forEach((trigger) => { trigger.hidden = !user; trigger.classList.toggle('is-ready', Boolean(user)); });
     if (!user) return paint(0);
     const { count, error } = await client.from('notifications').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_read', false);
     paint(error ? 0 : (count || 0));
