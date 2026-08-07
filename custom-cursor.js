@@ -6,12 +6,14 @@
 
   const canvas = document.createElement('canvas');
   canvas.className = 'wallverse-cursor-trail';
+  canvas.setAttribute('popover', 'manual');
   canvas.setAttribute('aria-hidden', 'true');
   const context = canvas.getContext('2d', { alpha: true });
   if (!context) return;
 
   const cursor = document.createElement('div');
   cursor.className = 'wallverse-cursor';
+  cursor.setAttribute('popover', 'manual');
   cursor.setAttribute('aria-hidden', 'true');
   const image = document.createElement('img');
   image.src = '/Curseur_256.png';
@@ -19,6 +21,17 @@
   cursor.append(image);
   document.body.append(canvas, cursor);
   document.documentElement.classList.add('has-wallverse-cursor');
+  const supportsPopover = typeof cursor.showPopover === 'function' && typeof canvas.showPopover === 'function';
+  const elevate = () => {
+    if (!supportsPopover) return;
+    [canvas, cursor].forEach((element) => { if (element.matches(':popover-open')) element.hidePopover(); });
+    canvas.showPopover();
+    cursor.showPopover();
+  };
+  elevate();
+  if (supportsPopover) new MutationObserver((mutations) => mutations.forEach((mutation) => {
+    if (mutation.target instanceof HTMLDialogElement && mutation.target.open) elevate();
+  })).observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ['open'] });
 
   const maxRipples = 14;
   const ripples = Array.from({ length: maxRipples }, () => ({ active: false, x: 0, y: 0, age: 0, life: 0, radius: 0, spread: 0, strength: 0, hue: 0 }));
