@@ -5,6 +5,10 @@
     if (!config || !helpers || !window.supabase?.createClient) return false;
 
     const client = window.WallverseSupabase || window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+    const uploadTrigger = document.getElementById('creator-upload');
+    const renderUploadTrigger = (user) => { if (uploadTrigger) uploadTrigger.hidden = !user; };
+    client.auth.getUser().then(({ data }) => renderUploadTrigger(data.user)).catch(() => renderUploadTrigger(null));
+    client.auth.onAuthStateChange((_event, session) => renderUploadTrigger(session?.user));
     const creatorId = new URLSearchParams(window.location.search).get('id');
     const fields = 'id,user_id,title,description,thumbnail_url,category,quality,width,height,file_size,likes_count,downloads_count,views_count,is_suggestive,is_weekly,is_featured,polished_until,created_at,storage_provider,thumbnail_storage_key,profiles!wallpapers_user_id_fkey(username,avatar_url),wallpaper_tags(tags(name))';
     const tierRank = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4, mythic: 5 };

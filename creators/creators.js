@@ -2,6 +2,10 @@
   const config = window.WALLVERSE_PUBLIC_CONFIG; const helpers = window.WallverseCards;
   if (!config || !helpers || !window.supabase?.createClient) return;
   const client = window.WallverseSupabase || window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+  const uploadTrigger = document.getElementById('creators-upload');
+  const renderUploadTrigger = (user) => { if (uploadTrigger) uploadTrigger.hidden = !user; };
+  client.auth.getUser().then(({ data }) => renderUploadTrigger(data.user)).catch(() => renderUploadTrigger(null));
+  client.auth.onAuthStateChange((_event, session) => renderUploadTrigger(session?.user));
   const ranking = document.getElementById('creators-ranking'); const status = document.getElementById('creators-status');
   let creators = []; let sort = 'power';
   const allPages = async (factory) => { const rows=[]; let offset=0; while(true){ const {data,error}=await factory(offset); if(error) throw error; const page=data||[]; rows.push(...page); if(page.length<1000) return rows; offset+=1000; } };

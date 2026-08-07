@@ -185,8 +185,6 @@ function renderCard(wallpaper) {
   const title = document.createElement('h3'); title.textContent = wallpaper.title || 'Untitled'; info.append(title);
   const creator = creatorNode(wallpaper.profiles);
   if (creator) { creator.classList.add('collectible-card__creator'); info.append(creator); }
-  const tag = tagsFor(wallpaper)[0] || wallpaper.category;
-  if (tag) { const badge = document.createElement('span'); badge.className = 'tag'; badge.textContent = tag; badges.append(badge); }
   const stats = document.createElement('div');
   stats.className = 'collectible-card__stats';
   for (const [icon, label, value] of [['\u2665', 'Likes', wallpaper.likes_count], ['\u21a7', 'Downloads', wallpaper.downloads_count], ['visibility', 'Views', wallpaper.views_count]]) {
