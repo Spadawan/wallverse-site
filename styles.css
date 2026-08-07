@@ -111,8 +111,8 @@ footer { display:grid; grid-template-columns:1fr auto; gap:28px; padding-top:34p
 /* An additional 10% vertical lift for every wallpaper-card surface. */
 .wallpaper-image,.collectible-card,.creator-dialog-card { aspect-ratio:75/154; }
 
-@keyframes wallverse-upload-cycle { 0%,42% { opacity:1; transform:rotate(0deg) scale(1); } 50%,92% { opacity:0; transform:rotate(110deg) scale(.58); } 100% { opacity:1; transform:rotate(180deg) scale(1); } }
-@keyframes wallverse-upload-cycle-plus { 0%,42% { opacity:0; transform:rotate(-110deg) scale(.58); } 50%,92% { opacity:1; transform:rotate(0deg) scale(1.04); } 100% { opacity:0; transform:rotate(110deg) scale(.58); } }
+@keyframes wallverse-upload-cycle { 0%,42% { opacity:1; transform:rotate(0deg) scale(1); } 50%,100% { opacity:0; transform:rotate(110deg) scale(.58); } }
+@keyframes wallverse-upload-cycle-plus { 0%,42% { opacity:0; transform:rotate(-110deg) scale(.58); } 50%,88% { opacity:1; transform:rotate(0deg) scale(1.04); } 100% { opacity:0; transform:rotate(110deg) scale(.58); } }
 .upload-trigger img,.upload-trigger:hover img { opacity:1; animation:wallverse-upload-cycle 3.1s cubic-bezier(.65,0,.35,1) infinite; transform:none; }.upload-trigger span,.upload-trigger:hover span { opacity:0; animation:wallverse-upload-cycle-plus 3.1s cubic-bezier(.65,0,.35,1) infinite; transform:none; }.upload-trigger:hover { transform:translateY(-2px) scale(1.06); border-color:var(--cyan); box-shadow:0 0 28px rgba(40,243,255,.45),0 0 48px rgba(155,92,255,.18); }.upload-trigger:hover::after { position:absolute; inset:3px; border:1px solid rgba(255,255,255,.32); border-radius:50%; animation:wallverse-upload-orbit .9s linear infinite; content:''; }@keyframes wallverse-upload-orbit { to { transform:rotate(1turn); } }
 
 @keyframes wallverse-brand-pulse { 0%,100% { filter:drop-shadow(0 0 0 rgba(40,243,255,0)); transform:translateZ(0) rotate(0deg); } 45% { filter:drop-shadow(0 0 10px rgba(40,243,255,.4)) drop-shadow(0 0 18px rgba(155,92,255,.24)); transform:translateZ(0) rotate(-2deg) scale(1.045); } 70% { transform:translateZ(0) rotate(1.5deg) scale(1.015); } }
@@ -272,3 +272,25 @@ img { -webkit-user-drag:none; user-select:none; }
 .site-header .brand::after { left:10px; }
 .site-header .brand>img,
 .site-header .brand>span { position:relative; z-index:1; }
+
+/* Gentle, tactile motion for the homepage highlights. */
+.spotlight-card,
+.featured-card,
+.creator-spotlight { transition:transform .32s cubic-bezier(.2,.8,.2,1),border-color .32s ease,box-shadow .32s ease; }
+.spotlight-card:hover,
+.featured-card:hover,
+.creator-spotlight:hover { z-index:2; border-color:rgba(40,243,255,.56); box-shadow:0 28px 66px rgba(0,0,0,.48),0 0 34px rgba(40,243,255,.14),0 0 48px rgba(155,92,255,.1); transform:translateY(-6px) scale(1.008); }
+.spotlight-card>img,
+.featured-card__image,
+.creator-spotlight__banner { transition:filter .35s ease,transform .5s cubic-bezier(.2,.8,.2,1); }
+.creator-spotlight__banner { transform:scale(1.035); }
+.spotlight-card:hover>img,
+.featured-card:hover .featured-card__image,
+.creator-spotlight:hover .creator-spotlight__banner { filter:brightness(1.08) saturate(1.08); }
+.creator-spotlight:hover .creator-spotlight__banner { transform:scale(1.075); }
+.creator-spotlight__content,.creator-spotlight__profile .avatar,.creator-spotlight__stats div { transition:transform .28s cubic-bezier(.2,.8,.2,1),box-shadow .28s ease,border-color .28s ease; }
+.creator-spotlight:hover .creator-spotlight__content { transform:translateY(-3px); }
+.creator-spotlight:hover .creator-spotlight__profile .avatar { transform:scale(1.06); box-shadow:0 0 0 5px rgba(40,243,255,.16),0 0 34px rgba(40,243,255,.34); }
+.creator-spotlight:hover .creator-spotlight__stats div { border-color:rgba(40,243,255,.28); box-shadow:0 8px 20px rgba(0,0,0,.18); transform:translateY(-2px); }
+.creator-spotlight:hover .creator-spotlight__stats div:nth-child(2) { transition-delay:.04s; }.creator-spotlight:hover .creator-spotlight__stats div:nth-child(3) { transition-delay:.08s; }.creator-spotlight:hover .creator-spotlight__stats div:nth-child(4) { transition-delay:.12s; }
+@media (prefers-reduced-motion:reduce) { .spotlight-card,.featured-card,.creator-spotlight,.spotlight-card>img,.featured-card__image,.creator-spotlight__banner,.creator-spotlight__content,.creator-spotlight__profile .avatar,.creator-spotlight__stats div { transition:none; } .spotlight-card:hover,.featured-card:hover,.creator-spotlight:hover,.creator-spotlight:hover .creator-spotlight__content,.creator-spotlight:hover .creator-spotlight__profile .avatar,.creator-spotlight:hover .creator-spotlight__stats div { transform:none; } }
