@@ -286,6 +286,7 @@
 
   helpers.enablePublicCardMotion(card);
   window.WallverseInspection = { open: openInspection, close: () => dialog.close(), isOpen: () => dialog.open };
+  window.dispatchEvent(new Event('wallverse:inspection-ready'));
   window.addEventListener('wallverse:inspect', (event) => {
     if (!event.detail?.wallpaper) return;
     if (window.WallverseWallpaperRouter?.navigate) window.WallverseWallpaperRouter.navigate(event.detail.wallpaper);

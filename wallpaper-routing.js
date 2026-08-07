@@ -1,7 +1,8 @@
 (() => {
-  const helpers = window.WallverseCards;
-  const inspection = window.WallverseInspection;
-  if (!helpers?.wallpaperPath || !inspection) return;
+  // Keep routing independent from the feed script's cache version. The detail
+  // viewer and data helpers can finish loading after this deferred script.
+  const helpers = () => window.WallverseCards || {};
+  const inspection = () => window.WallverseInspection;
 
   const defaultSeo = {
     title: document.title,
@@ -16,11 +17,21 @@
   let routeNotFound;
 
   function isWallpaperRoute() { return /^\/wallpaper\/[^/]+\/?$/.test(window.location.pathname); }
+  function wallpaperPath(wallpaper) {
+    const title = String(wallpaper?.title || 'wallpaper').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'wallpaper';
+    const shortId = String(wallpaper?.id || '').replace(/-/g, '').slice(0, 8);
+    return shortId ? `/wallpaper/${title}-${shortId}` : '/';
+  }
   function shortIdFromRoute() {
     const segment = window.location.pathname.replace(/\/$/, '').split('/').pop() || '';
     return segment.match(/-([a-z0-9]{6,})$/i)?.[1].toLowerCase() || '';
   }
   function findWallpaper() {
+    const historyId = String(history.state?.wallpaperId || '');
+    if (historyId) {
+      const byId = (window.WallversePublicCatalog || []).find((wallpaper) => String(wallpaper.id || '') === historyId);
+      if (byId) return byId;
+    }
     const shortId = shortIdFromRoute();
     if (!shortId) return null;
     return (window.WallversePublicCatalog || []).find((wallpaper) => String(wallpaper.id || '').replace(/-/g, '').toLowerCase().startsWith(shortId)) || null;
@@ -39,8 +50,8 @@
     const title = wallpaper.title || 'Wallpaper';
     const creator = wallpaper.profiles?.username ? ` by @${wallpaper.profiles.username}` : '';
     const description = wallpaper.description || `Discover ${title}${creator} on Wallverse.`;
-    const url = new URL(helpers.wallpaperPath(wallpaper), window.location.origin).href;
-    const image = helpers.thumbnailUrl(wallpaper);
+    const url = new URL(wallpaperPath(wallpaper), window.location.origin).href;
+    const image = helpers().thumbnailUrl?.(wallpaper) || '';
     document.title = `${title} Wallpaper | Wallverse`;
     meta('meta[name="description"]', { name: 'description' }, description);
     meta('meta[property="og:title"]', { property: 'og:title' }, document.title);
@@ -69,16 +80,23 @@
     document.title = 'Wallpaper not found | Wallverse';
   }
   function closeForHistory() {
-    if (!inspection.isOpen()) return;
+    const viewer = inspection();
+    if (!viewer?.isOpen?.()) return;
     ignoreInspectionClose = true;
-    inspection.close();
+    viewer.close();
   }
-  function present(wallpaper) { hideNotFound(); updateSeo(wallpaper); inspection.open(wallpaper); }
+  function present(wallpaper) {
+    const viewer = inspection();
+    if (!viewer?.open) return;
+    hideNotFound();
+    updateSeo(wallpaper);
+    viewer.open(wallpaper);
+  }
   function openCurrentRoute() {
     if (!isWallpaperRoute()) { hideNotFound(); restoreSeo(); closeForHistory(); return; }
     const wallpaper = findWallpaper();
     if (wallpaper) present(wallpaper);
-    else if (window.WallversePublicCatalog) { restoreSeo(); closeForHistory(); showNotFound(); }
+    else if (Array.isArray(window.WallversePublicCatalog)) { restoreSeo(); closeForHistory(); showNotFound(); }
   }
   function bootstrapDirectRoute() {
     if (!isWallpaperRoute() || history.state?.wallverseWallpaper) return;
@@ -87,8 +105,8 @@
     history.pushState({ wallverseWallpaper: true }, '', route);
   }
   function navigate(wallpaper) {
-    const target = helpers.wallpaperPath(wallpaper);
-    if (`${window.location.pathname}${window.location.search}` !== target) history.pushState({ wallverseWallpaper: true }, '', target);
+    const target = wallpaperPath(wallpaper);
+    if (`${window.location.pathname}${window.location.search}` !== target) history.pushState({ wallverseWallpaper: true, wallpaperId: wallpaper.id }, '', target);
     present(wallpaper);
   }
   function onInspectionClosed() {
@@ -97,9 +115,10 @@
     else restoreSeo();
   }
 
-  window.WallverseWallpaperRouter = { navigate, onInspectionClosed };
+  window.WallverseWallpaperRouter = { navigate, onInspectionClosed, wallpaperPath };
   bootstrapDirectRoute();
   window.addEventListener('wallverse:catalog-ready', openCurrentRoute);
+  window.addEventListener('wallverse:inspection-ready', openCurrentRoute);
   window.addEventListener('popstate', openCurrentRoute);
   openCurrentRoute();
 })();

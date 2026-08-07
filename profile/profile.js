@@ -35,7 +35,9 @@
   const compact = (value) => new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(Number(value) || 0);
   const r2Url = (key) => `${config.r2PublicBaseUrl.replace(/\/+$/, '')}/${String(key || '').replace(/^\/+/, '').split('/').map(encodeURIComponent).join('/')}`;
   const thumbnail = (wallpaper) => wallpaper.storage_provider === 'cloudflare_r2' && wallpaper.thumbnail_storage_key ? r2Url(wallpaper.thumbnail_storage_key) : (wallpaper.thumbnail_url || '');
-  const wallpaperPath = (wallpaper) => window.WallverseCards?.wallpaperPath?.(wallpaper) || '/';
+  const wallpaperPath = (wallpaper) => window.WallverseCards?.wallpaperPath?.(wallpaper)
+    || window.WallverseWallpaperRouter?.wallpaperPath?.(wallpaper)
+    || `/wallpaper/${String(wallpaper?.title || 'wallpaper').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'wallpaper'}-${String(wallpaper?.id || '').replace(/-/g, '').slice(0, 8)}`;
   function cardScore(wallpaper) {
     const quality = String(wallpaper.quality || '').toLowerCase();
     const qualityScore = quality === 'premium' ? 180 : quality === 'high' ? 90 : quality === 'standard' ? 30 : 0;

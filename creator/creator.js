@@ -24,6 +24,9 @@
     const wallpaperFor = (card) => Array.isArray(card?.wallpapers) ? card.wallpapers[0] : (card?.wallpapers || card);
     const cardScore = helpers.publicCardScore;
     const tier = helpers.publicCardTier;
+    const wallpaperPath = (wallpaper) => helpers.wallpaperPath?.(wallpaper)
+      || window.WallverseWallpaperRouter?.wallpaperPath?.(wallpaper)
+      || `/wallpaper/${String(wallpaper?.title || 'wallpaper').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'wallpaper'}-${String(wallpaper?.id || '').replace(/-/g, '').slice(0, 8)}`;
     const allPages = async (factory) => {
       const result = []; let offset = 0;
       while (true) {
@@ -55,7 +58,7 @@
       const wallpaper = wallpaperFor(record); const rarity = tier(wallpaper);
       const polished = wallpaper.polished_until && new Date(wallpaper.polished_until) > new Date();
       const card = document.createElement('a'); card.className = `collectible-card tier--${rarity}${polished ? ' is-polished' : ''}`;
-      card.href = helpers.wallpaperPath(wallpaper);
+      card.href = wallpaperPath(wallpaper);
       card.setAttribute('aria-label', `Open ${wallpaper.title || 'Untitled card'}, ${rarity} rarity`);
       const media = document.createElement('div'); media.className = 'collectible-card__media';
       const source = helpers.thumbnailUrl(wallpaper);
