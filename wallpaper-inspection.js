@@ -27,7 +27,7 @@
   const downloadDialog = document.createElement('dialog');
   downloadDialog.className = 'download-ad-dialog';
   downloadDialog.setAttribute('aria-labelledby', 'download-ad-title');
-  downloadDialog.innerHTML = `<button class="dialog-close download-ad-dialog__close" type="button" data-close-download-ad aria-label="Cancel download">×</button><div class="download-ad-dialog__body"><p class="highlight-label">SPONSORED DOWNLOAD</p><h2 id="download-ad-title">Unlock HD Download</h2><p>This short sponsored message helps keep Wallverse free.</p><div class="download-ad-dialog__ad"><span>Advertisement</span><ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-6482601365294880" data-ad-slot="9142050893" data-ad-format="auto" data-full-width-responsive="true"></ins></div><p class="download-ad-dialog__status" id="download-ad-status" role="status" aria-live="polite">Download available in 5…</p><div class="download-ad-dialog__actions"><button class="text-button" type="button" data-close-download-ad>Cancel</button><button class="button" id="download-ad-confirm" type="button" disabled>Download HD</button></div></div>`;
+  downloadDialog.innerHTML = `<button class="dialog-close download-ad-dialog__close" type="button" data-close-download-ad aria-label="Cancel download">×</button><div class="download-ad-dialog__body"><p class="highlight-label">SPONSORED DOWNLOAD</p><h2 id="download-ad-title">Unlock HD Download</h2><p>This short sponsored message helps keep Wallverse free.</p><div class="download-ad-dialog__ad"><span>Advertisement</span><ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-6482601365294880" data-ad-slot="9142050893" data-ad-format="auto" data-full-width-responsive="true"></ins></div><p class="download-ad-dialog__status" id="download-ad-status" role="status" aria-live="polite">Download available in 6…</p><div class="download-ad-dialog__actions"><button class="text-button" type="button" data-close-download-ad>Cancel</button><button class="button" id="download-ad-confirm" type="button" disabled>Download HD</button></div></div>`;
   document.body.append(downloadDialog);
   const downloadStatus = downloadDialog.querySelector('#download-ad-status');
   const downloadConfirm = downloadDialog.querySelector('#download-ad-confirm');
@@ -161,7 +161,7 @@
   }
   function startDownloadCountdown() {
     clearDownloadCountdown();
-    let remaining = 5;
+    let remaining = 6;
     downloadConfirm.disabled = true;
     downloadStatus.textContent = `Download available in ${remaining}…`;
     downloadTimer = window.setInterval(() => {
@@ -178,17 +178,37 @@
     initializeDownloadAd();
     startDownloadCountdown();
   }
+  function downloadFileName(wallpaper, url) {
+    const rawTitle = String(wallpaper?.title || '').trim();
+    const safeTitle = rawTitle
+      .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 96);
+    const extension = (new URL(url, window.location.href).pathname.match(/\.([a-z0-9]{2,5})$/i)?.[1] || 'webp').toLowerCase();
+    return safeTitle ? `${safeTitle}.${extension}` : 'wallverse-wallpaper.webp';
+  }
+  async function triggerDirectDownload(url, filename) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const blobUrl = URL.createObjectURL(await response.blob());
+      const link = document.createElement('a');
+      link.href = blobUrl; link.download = filename;
+      document.body.append(link); link.click(); link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+      return;
+    } catch (error) {
+      console.warn('Direct HD download is unavailable; opening the image instead.', error);
+    }
+    const link = document.createElement('a');
+    link.href = url; link.download = filename; link.target = '_blank'; link.rel = 'noopener';
+    document.body.append(link); link.click(); link.remove();
+  }
   async function confirmDownload() {
     if (!currentWallpaper) return;
     const url = helpers.downloadUrl(currentWallpaper);
     if (!url) { downloadStatus.textContent = 'HD download is unavailable for this wallpaper.'; return; }
     downloadConfirm.disabled = true;
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `wallverse-${currentWallpaper.id}-hd`;
-    link.target = '_blank';
-    link.rel = 'noopener';
-    document.body.append(link); link.click(); link.remove();
+    await triggerDirectDownload(url, downloadFileName(currentWallpaper, url));
     try {
       const { data, error } = await client.rpc('record_wallpaper_download', { wallpaper_id_input: currentWallpaper.id, quality_input: 'hd' });
       if (error) throw error;
