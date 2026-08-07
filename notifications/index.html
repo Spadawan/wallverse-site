@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="description" content="Your Wallverse activity and gift notifications.">
+  <title>Notifications | Wallverse</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css?v=notifications-1">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="Wallverse home"><img src="/assets/wallverse-mark.webp" alt="" width="40" height="40"><span>WALLVERSE</span></a>
+    <nav class="nav nav--desktop" aria-label="Main navigation"><a href="/#for-you">Explore</a><a href="/creators/">Creators</a><a href="/#about">About</a></nav>
+    <div class="header-actions"><a class="search-visual search-visual--trigger" href="/#for-you" aria-label="Search wallpapers"><span class="material-symbols-rounded" aria-hidden="true">search</span><span class="sr-only">Search wallpapers</span></a><a class="notification-trigger is-active" href="/notifications/" aria-current="page" aria-label="Notifications"><span class="material-symbols-rounded" aria-hidden="true">notifications</span><span class="notification-badge" data-notifications-badge hidden></span></a><a class="button button--small" href="https://play.google.com/store/apps/details?id=app.wallverse.mobile" target="_blank" rel="noopener">Get the app</a></div>
+  </header>
+  <main id="main-content" class="notifications-page section-shell">
+    <div class="notifications-page__head"><div><p class="eyebrow"><span></span> YOUR WALLVERSE</p><h1>Notifications</h1><p>Keep up with your activity, collection and community.</p></div><button class="button button--ghost" id="notifications-read-all" type="button" disabled>Mark all read</button></div>
+    <section class="notifications-panel" aria-labelledby="notifications-title"><h2 id="notifications-title" class="sr-only">Your notifications</h2><p class="feed-status" id="notifications-status" role="status">Checking notifications…</p><div class="notifications-list" id="notifications-list" aria-live="polite"></div></section>
+    <section class="notifications-signed-out" id="notifications-signed-out" hidden><span class="material-symbols-rounded" aria-hidden="true">notifications</span><h2>Sign in to view notifications.</h2><p>Activity, collection updates and gifts are linked to your Wallverse account.</p><a class="button" href="/">Sign in</a></section>
+  </main>
+  <footer><div class="footer-brand"><a class="brand" href="/"><img src="/assets/wallverse-mark.webp" alt="" width="34" height="34"><span>WALLVERSE</span></a><p>Wallpaper discovery for Android.</p></div><nav class="footer-links" aria-label="Legal links"><a href="/privacy/">Privacy Policy</a><a href="/terms/">Terms of Service</a><a href="/delete-account.html">Delete Account</a></nav><p class="copyright">© <span id="year"></span> Wallverse. Google Play is a trademark of Google LLC.</p></footer>
+  <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+  <script src="/site-protection.js?v=card-inspection-1" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="/wallverse-data.js?v=category-1" defer></script>
+  <script src="/notifications-badge.js?v=1" defer></script>
+  <script src="/notifications/notifications.js?v=1" defer></script>
+  <script src="/custom-cursor.js?v=3" defer></script>
+</body>
+</html>

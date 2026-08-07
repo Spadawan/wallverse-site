@@ -40,6 +40,7 @@
         <span class="material-symbols-rounded" aria-hidden="true">search</span><span class="sr-only">Search wallpapers</span>
       </button>
       <button class="upload-trigger" type="button" data-open-upload hidden aria-label="Upload a wallpaper"><img src="/assets/wallverse-mark.webp" alt=""><span aria-hidden="true">+</span></button>
+      <a class="notification-trigger" href="/notifications/" aria-label="Notifications"><span class="material-symbols-rounded" aria-hidden="true">notifications</span><span class="notification-badge" data-notifications-badge hidden></span></a>
       <button class="button button--auth" id="auth-trigger" type="button">Sign in</button>
       <div class="account-menu" id="account-menu" hidden>
         <button class="account-menu__trigger" id="account-menu-trigger" type="button" aria-haspopup="true" aria-expanded="false"><span class="avatar avatar--violet" id="account-avatar">W</span><span id="account-name">Profile</span></button>
@@ -214,6 +215,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
   <script src="/wallverse-data.js?v=category-1" defer></script>
   <script src="/wallverse-auth.js?v=signup-1" defer></script>
+  <script src="/notifications-badge.js?v=1" defer></script>
   <script src="/wallpaper-inspection.js?v=stats-1" defer></script>
   <script src="/wallpaper-routing.js?v=short-links-1" defer></script>
   <script src="/wallpaper-upload.js?v=webp-parity-1" defer></script>
