@@ -67,6 +67,7 @@
     currentProfile = null;
     authTrigger.hidden = Boolean(user);
     document.querySelectorAll('[data-open-auth]').forEach((button) => { button.hidden = Boolean(user); });
+    document.querySelectorAll('[data-open-upload]').forEach((button) => { button.hidden = !user; });
     accountMenu.hidden = !user;
     document.documentElement.dataset.authenticated = user ? 'true' : 'false';
     if (!user) return;
