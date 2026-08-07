@@ -324,3 +324,14 @@ img { -webkit-user-drag:none; user-select:none; }
   .auth-dialog__footer { align-items:flex-start; flex-direction:column; }
   .upload-crop__stage { width:min(252px,72vw); }
 }
+
+/* Public and personal collections keep a readable two-card layout on phones. */
+@media (max-width:760px) {
+  #profile-wallpaper-grid,
+  #creator-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px 14px; }
+  .creator-dialog__cards { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:340px) {
+  #profile-wallpaper-grid,
+  #creator-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
