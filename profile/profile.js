@@ -200,9 +200,9 @@
     grid.replaceChildren(...cards.map((ownedCard) => {
       const wallpaper = wallpaperFor(ownedCard);
       const tier = cardTier(wallpaper);
-      const frame = String(ownedCard.card_frame_type || ownedCard.card_frame_id || 'default').replace(/[^A-Za-z]/g, '').toLowerCase() || 'default';
+      const frame = window.WallverseCardFrames?.normalize(ownedCard.card_frame_type, ownedCard.card_frame_id) || 'default';
       const polished = wallpaper.polished_until && new Date(wallpaper.polished_until) > new Date();
-      const card = document.createElement('a'); card.className = `collectible-card tier--${tier} frame--${frame}${polished ? ' is-polished' : ''}`;
+      const card = document.createElement('a'); card.className = `collectible-card tier--${tier}${polished ? ' is-polished' : ''}`;
       card.href = wallpaperPath(wallpaper);
       card.setAttribute('aria-label', `Open ${wallpaper.title || 'Untitled card'}, ${tier} rarity, ${Number(wallpaper.likes_count) || 0} likes, ${Number(wallpaper.downloads_count) || 0} downloads, ${Number(wallpaper.views_count) || 0} views`);
       const imageBox = document.createElement('div'); imageBox.className = 'collectible-card__media';
@@ -215,7 +215,8 @@
       const stats = document.createElement('div'); stats.className = 'collectible-card__stats';
       stats.append(cardStat('♥', 'Likes', wallpaper.likes_count), cardStat('↧', 'Downloads', wallpaper.downloads_count), cardStat('visibility', 'Views', wallpaper.views_count));
       info.append(title, stats); imageBox.append(surface, shine, info); card.append(imageBox);
-      const inspect = () => window.dispatchEvent(new CustomEvent('wallverse:inspect', { detail: { wallpaper } }));
+      window.WallverseCardFrames?.apply(card, frame);
+      const inspect = () => window.dispatchEvent(new CustomEvent('wallverse:inspect', { detail: { wallpaper: { ...wallpaper, web_card_frame_type: frame } } }));
       card.addEventListener('click', (event) => { event.preventDefault(); inspect(); });
       observeCollectionCard(card); enableCardMotion(card); return card;
     }));

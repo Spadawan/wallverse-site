@@ -126,12 +126,15 @@
   }
   function renderWallpaper(wallpaper) {
     const tier = helpers.publicCardTier(wallpaper);
+    const frame = window.WallverseCardFrames?.normalize(wallpaper.web_card_frame_type, wallpaper.card_frame_type, wallpaper.card_frame_id) || 'default';
     const polished = wallpaper.polished_until && new Date(wallpaper.polished_until) > new Date();
     dialog.className = `inspection-dialog tier--${tier}`;
     card.className = `collectible-card inspection-card tier--${tier} is-visible${polished ? ' is-polished' : ''}`;
+    window.WallverseCardFrames?.apply(card, frame);
     image.src = helpers.thumbnailUrl(wallpaper); image.alt = wallpaper.title ? `${wallpaper.title} wallpaper card` : 'Wallverse wallpaper card'; image.draggable = false;
     document.getElementById('inspection-title').textContent = wallpaper.title || 'Untitled';
-    document.getElementById('inspection-rarity').textContent = `${tier}${polished ? ' · Polished' : ''}`;
+    const frameLabel = frame === 'default' ? '' : ` · ${window.WallverseCardFrames.label(frame)}`;
+    document.getElementById('inspection-rarity').textContent = `${tier}${frameLabel}${polished ? ' · Polished' : ''}`;
     document.getElementById('inspection-card-stats').replaceChildren(stat('♥', 'Likes', wallpaper.likes_count), stat('⇩', 'Downloads', wallpaper.downloads_count), stat('visibility', 'Views', wallpaper.views_count));
     document.getElementById('inspection-like-count').textContent = helpers.compactNumber(wallpaper.likes_count);
     const profile = profileFor(wallpaper.profiles); const owner = document.getElementById('inspection-owner');

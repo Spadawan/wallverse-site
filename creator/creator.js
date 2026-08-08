@@ -56,6 +56,7 @@
     };
     const renderCard = (record) => {
       const wallpaper = wallpaperFor(record); const rarity = tier(wallpaper);
+      const frame = window.WallverseCardFrames?.normalize(record?.card_frame_type, record?.card_frame_id) || 'default';
       const polished = wallpaper.polished_until && new Date(wallpaper.polished_until) > new Date();
       const card = document.createElement('a'); card.className = `collectible-card tier--${rarity}${polished ? ' is-polished' : ''}`;
       card.href = wallpaperPath(wallpaper);
@@ -73,7 +74,8 @@
       const stats = document.createElement('div'); stats.className = 'collectible-card__stats';
       stats.append(cardStat('♥', 'Likes', wallpaper.likes_count), cardStat('⇩', 'Downloads', wallpaper.downloads_count), cardStat('visibility', 'Views', wallpaper.views_count));
       info.append(title, stats); media.append(surface, shine, info); card.append(media);
-      const inspect = () => window.dispatchEvent(new CustomEvent('wallverse:inspect', { detail: { wallpaper } }));
+      window.WallverseCardFrames?.apply(card, frame);
+      const inspect = () => window.dispatchEvent(new CustomEvent('wallverse:inspect', { detail: { wallpaper: { ...wallpaper, web_card_frame_type: frame } } }));
       card.addEventListener('click', (event) => { event.preventDefault(); inspect(); });
       helpers.enablePublicCardMotion(card); observe(card); return card;
     };
@@ -119,7 +121,7 @@
         const [{ data: profile, error: profileError }, uploaded, owned] = await Promise.all([
           client.from('profiles').select('id,username,role,avatar_url,banner_url').eq('id', creatorId).maybeSingle(),
           allPages((offset) => client.from('wallpapers').select(fields).eq('user_id', creatorId).eq('status', 'approved').eq('is_suggestive', false).order('created_at', { ascending: false }).range(offset, offset + 999)),
-          allPages((offset) => client.from('user_cards').select(`id,acquired_at,wallpapers!inner(${fields})`).eq('owner_id', creatorId).eq('wallpapers.status', 'approved').eq('wallpapers.is_suggestive', false).order('acquired_at', { ascending: false }).range(offset, offset + 999)).catch(() => []),
+          allPages((offset) => client.from('user_cards').select(`id,acquired_at,card_frame_id,card_frame_type,wallpapers!inner(${fields})`).eq('owner_id', creatorId).eq('wallpapers.status', 'approved').eq('wallpapers.is_suggestive', false).order('acquired_at', { ascending: false }).range(offset, offset + 999)).catch(() => []),
         ]);
         if (profileError) throw profileError;
         if (!profile) { fail('This creator profile was not found.'); return; }
