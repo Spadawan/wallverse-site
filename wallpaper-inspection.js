@@ -128,7 +128,7 @@
   }
   function renderWallpaper(wallpaper) {
     const tier = helpers.publicCardTier(wallpaper);
-    const frame = window.WallverseCardFrames?.normalize(wallpaper.web_card_frame_type, wallpaper.card_frame_type, wallpaper.card_frame_id) || 'default';
+    const frame = window.WallverseCardFrames?.normalize(wallpaper, wallpaper.web_card_frame_type, wallpaper.card_frame_type, wallpaper.card_frame_id) || 'default';
     const polished = wallpaper.polished_until && new Date(wallpaper.polished_until) > new Date();
     dialog.className = `inspection-dialog tier--${tier}`;
     card.className = `collectible-card inspection-card tier--${tier} is-visible${polished ? ' is-polished' : ''}`;

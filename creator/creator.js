@@ -57,7 +57,7 @@
     };
     const renderCard = (record) => {
       const wallpaper = wallpaperFor(record); const rarity = tier(wallpaper);
-      const frame = window.WallverseCardFrames?.normalize(record?.card_frame_type, record?.card_frame_id) || 'default';
+      const frame = window.WallverseCardFrames?.normalize(record, record?.card_frame_type, record?.card_frame_id) || 'default';
       const polished = wallpaper.polished_until && new Date(wallpaper.polished_until) > new Date();
       const card = document.createElement('a'); card.className = `collectible-card tier--${rarity}${polished ? ' is-polished' : ''}`;
       card.href = wallpaperPath(wallpaper);

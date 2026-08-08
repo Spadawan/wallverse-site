@@ -238,7 +238,7 @@
     grid.replaceChildren(...cards.map((ownedCard) => {
       const wallpaper = wallpaperFor(ownedCard);
       const tier = cardTier(wallpaper);
-      const frame = window.WallverseCardFrames?.normalize(ownedCard.card_frame_type, ownedCard.card_frame_id) || 'default';
+      const frame = window.WallverseCardFrames?.normalize(ownedCard, ownedCard.card_frame_type, ownedCard.card_frame_id) || 'default';
       const polished = wallpaper.polished_until && new Date(wallpaper.polished_until) > new Date();
       const card = document.createElement('a'); card.className = `collectible-card tier--${tier}${polished ? ' is-polished' : ''}`;
       card.href = wallpaperPath(wallpaper);

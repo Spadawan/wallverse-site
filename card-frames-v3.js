@@ -1,17 +1,36 @@
 (() => {
   const supported = new Set(['neonrounded', 'neongradient', 'cyberpunk', 'electric']);
   const aliases = new Map([
+    ['defaultframe', 'default'],
     ['frameneonrounded', 'neonrounded'],
     ['frameneongradient', 'neongradient'],
     ['framecyberpunk', 'cyberpunk'],
     ['frameelectric', 'electric'],
   ]);
 
+  function frameCandidates(value) {
+    if (value && typeof value === 'object') {
+      const nestedFrame = value.frame && typeof value.frame === 'object' ? value.frame : {};
+      return [
+        value.card_frame_type, value.card_frame_id, value.cardFrameType, value.cardFrameId,
+        value.frame_type, value.frame_id, value.frameType, value.frameId,
+        nestedFrame.type, nestedFrame.id, nestedFrame.name,
+      ];
+    }
+    return [value];
+  }
+
   function normalize(...values) {
     for (const value of values) {
-      const candidate = String(value || '').replace(/[^A-Za-z]/g, '').toLowerCase();
-      if (supported.has(candidate)) return candidate;
-      if (aliases.has(candidate)) return aliases.get(candidate);
+      for (const rawValue of frameCandidates(value)) {
+        const candidate = String(rawValue || '').replace(/[^A-Za-z]/g, '').toLowerCase();
+        if (supported.has(candidate)) return candidate;
+        if (aliases.has(candidate)) return aliases.get(candidate);
+        if (candidate.includes('neonrounded')) return 'neonrounded';
+        if (candidate.includes('neongradient')) return 'neongradient';
+        if (candidate.includes('cyberpunk')) return 'cyberpunk';
+        if (candidate.includes('electric')) return 'electric';
+      }
     }
     return 'default';
   }

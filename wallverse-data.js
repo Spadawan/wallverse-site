@@ -39,8 +39,11 @@ let visibleFeedCount = PAGE_SIZE;
 let feedRequestRevision = 0;
 let feedShowSuggestive = false;
 let feedUser = null;
+let feedClient = null;
 let feedReady = false;
 let creatorSpotlightProfile = null;
+let feedAlgorithmProfile = null;
+let feedAlgorithmLoading = null;
 const publicRequests = new Map();
 
 function registerIdleCard(card) {
@@ -286,9 +289,104 @@ function renderAdCard(variant = 'grid') {
 
 const feedTierRank = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4, mythic: 5 };
 function updateFeedSortControls() {
-  const popular = document.getElementById('feed-sort-popular'); const recent = document.getElementById('feed-sort-recent');
+  const popular = document.getElementById('feed-sort-popular'); const recent = document.getElementById('feed-sort-recent'); const algorithm = document.getElementById('feed-sort-algorithm');
   popular.classList.toggle('is-active', feedSort === 'popular'); popular.setAttribute('aria-pressed', String(feedSort === 'popular'));
   recent.classList.toggle('is-active', feedSort === 'recent'); recent.setAttribute('aria-pressed', String(feedSort === 'recent'));
+  if (algorithm) {
+    algorithm.hidden = !feedUser;
+    algorithm.classList.toggle('is-active', feedSort === 'algorithm');
+    algorithm.setAttribute('aria-pressed', String(feedSort === 'algorithm'));
+    algorithm.title = feedAlgorithmProfile?.signalCount >= 2 ? 'Ranked from your Wallverse activity' : 'Like, save or download wallpapers to personalize this feed.';
+  }
+}
+
+async function fetchFeedSignalIds(table, userId, { timestampColumn = 'created_at', limit = 60, direction } = {}) {
+  try {
+    let request = feedClient.from(table).select('wallpaper_id').eq('user_id', userId).order(timestampColumn, { ascending: false }).limit(limit);
+    if (direction) request = request.eq('direction', direction);
+    const { data, error } = await request;
+    if (error) throw error;
+    return new Set((data || []).map((row) => String(row.wallpaper_id || '')).filter(Boolean));
+  } catch (error) {
+    console.warn(`For you signal unavailable: ${table}.`, error);
+    return new Set();
+  }
+}
+
+async function fetchFollowedCreatorIds(userId) {
+  try {
+    const { data, error } = await feedClient.from('follows').select('followed_id').eq('follower_id', userId).order('created_at', { ascending: false }).limit(80);
+    if (error) throw error;
+    return new Set((data || []).map((row) => String(row.followed_id || '')).filter(Boolean));
+  } catch (error) {
+    console.warn('For you follows unavailable.', error);
+    return new Set();
+  }
+}
+
+async function loadFeedAlgorithmProfile() {
+  if (!feedUser || !feedClient) { feedAlgorithmProfile = null; updateFeedSortControls(); return null; }
+  const userId = feedUser.id;
+  const [likedIds, favoriteIds, downloadedIds, viewedIds, passedIds, followedCreatorIds] = await Promise.all([
+    fetchFeedSignalIds('likes', userId),
+    fetchFeedSignalIds('favorites', userId),
+    fetchFeedSignalIds('downloads', userId),
+    fetchFeedSignalIds('wallpaper_views', userId, { timestampColumn: 'viewed_at', limit: 80 }),
+    fetchFeedSignalIds('user_discovery_swipes', userId, { timestampColumn: 'updated_at', limit: 120, direction: 'pass' }),
+    fetchFollowedCreatorIds(userId),
+  ]);
+  if (feedUser?.id !== userId) return null;
+  const tagWeights = new Map(); const categoryWeights = new Map();
+  const byId = new Map(loadedWallpapers.map((wallpaper) => [wallpaper.id, wallpaper]));
+  const addAffinity = (wallpaperId, tagWeight, categoryWeight) => {
+    const wallpaper = byId.get(wallpaperId); if (!wallpaper) return;
+    const category = String(wallpaper.category || '');
+    if (category) categoryWeights.set(category, (categoryWeights.get(category) || 0) + categoryWeight);
+    tagsFor(wallpaper).forEach((tag) => tagWeights.set(tag, (tagWeights.get(tag) || 0) + tagWeight));
+  };
+  favoriteIds.forEach((id) => addAffinity(id, 10, 7));
+  likedIds.forEach((id) => addAffinity(id, 8, 5));
+  downloadedIds.forEach((id) => addAffinity(id, 7, 5));
+  viewedIds.forEach((id) => addAffinity(id, 1, 0.6));
+  passedIds.forEach((id) => addAffinity(id, -1.5, -1));
+  const interactedWallpaperIds = new Set([...likedIds, ...favoriteIds, ...downloadedIds, ...viewedIds, ...passedIds]);
+  feedAlgorithmProfile = {
+    tagWeights, categoryWeights, followedCreatorIds, interactedWallpaperIds,
+    signalCount: likedIds.size + favoriteIds.size + downloadedIds.size + viewedIds.size + passedIds.size + followedCreatorIds.size,
+  };
+  updateFeedSortControls();
+  return feedAlgorithmProfile;
+}
+
+function feedFreshnessScore(createdAt) {
+  const ageDays = Math.floor((Date.now() - new Date(createdAt || 0).getTime()) / 86400000);
+  if (!Number.isFinite(ageDays)) return 0;
+  return ageDays <= 0 ? 8 : Math.max(0, 8 - ageDays * 0.25);
+}
+
+function feedAlgorithmScore(wallpaper, profile) {
+  let score = 0;
+  tagsFor(wallpaper).forEach((tag) => { score += profile.tagWeights.get(tag) || 0; });
+  score += profile.categoryWeights.get(String(wallpaper.category || '')) || 0;
+  if (profile.followedCreatorIds.has(wallpaper.user_id)) score += 12;
+  if (wallpaper.is_featured) score += 7;
+  if (wallpaper.polished_until && new Date(wallpaper.polished_until) > new Date()) score += 3.5;
+  score += Math.log((Number(wallpaper.likes_count) || 0) + 1) * 2.8;
+  score += Math.log((Number(wallpaper.downloads_count) || 0) + 1) * 2.4;
+  score += Math.log((Number(wallpaper.views_count) || 0) + 1) * 0.45;
+  score += feedFreshnessScore(wallpaper.created_at);
+  if (profile.interactedWallpaperIds.has(wallpaper.id)) score -= 18;
+  return score;
+}
+
+function algorithmSortedFeed(wallpapers) {
+  const profile = feedAlgorithmProfile;
+  if (!profile || profile.signalCount < 2) return [...wallpapers].sort((left, right) => new Date(right.created_at || 0) - new Date(left.created_at || 0));
+  const candidates = [...wallpapers].sort((left, right) => new Date(right.created_at || 0) - new Date(left.created_at || 0)).slice(0, 240);
+  const scored = candidates.map((wallpaper) => ({ wallpaper, score: feedAlgorithmScore(wallpaper, profile) })).sort((left, right) => right.score - left.score);
+  const unseen = scored.filter(({ wallpaper }) => !profile.interactedWallpaperIds.has(wallpaper.id));
+  const seen = scored.filter(({ wallpaper }) => profile.interactedWallpaperIds.has(wallpaper.id));
+  return [...unseen, ...seen].map(({ wallpaper }) => wallpaper);
 }
 function renderFeed() {
   const query = document.getElementById('feed-search')?.value.trim().toLocaleLowerCase() || '';
@@ -299,7 +397,8 @@ function renderFeed() {
     const searchable = [wallpaper.title, wallpaper.category, wallpaper.profiles?.username, ...tagsFor(wallpaper)].filter(Boolean).join(' ').toLocaleLowerCase();
     return (!query || searchable.includes(query)) && (rarity === 'all' || publicCardTier(wallpaper) === rarity) && (category === 'all' || String(wallpaper.category || '').toLocaleLowerCase() === category) && (quality === 'all' || String(wallpaper.quality || '').toLocaleLowerCase() === quality);
   });
-  filtered.sort((left, right) => {
+  if (feedSort === 'algorithm') filtered.splice(0, filtered.length, ...algorithmSortedFeed(filtered));
+  else filtered.sort((left, right) => {
     if (feedSort === 'recent') return new Date(right.created_at || 0) - new Date(left.created_at || 0);
     return feedTierRank[publicCardTier(right)] - feedTierRank[publicCardTier(left)] || publicCardScore(right) - publicCardScore(left) || new Date(right.created_at || 0) - new Date(left.created_at || 0);
   });
@@ -311,7 +410,8 @@ function renderFeed() {
     if ((index + 1) % AD_CARD_INTERVAL === 0) feedItems.push(renderAdCard());
   });
   grid.replaceChildren(...feedItems);
-  status.textContent = filtered.length ? `Showing ${visible.length} of ${filtered.length} public wallpapers` : 'No public wallpapers match these filters.';
+  const algorithmNote = feedSort === 'algorithm' && feedAlgorithmProfile?.signalCount < 2 ? ' Save, like or download wallpapers to personalize this feed.' : '';
+  status.textContent = filtered.length ? `Showing ${visible.length} of ${filtered.length} public wallpapers.${algorithmNote}` : 'No public wallpapers match these filters.';
   status.hidden = false;
   loadMore.hidden = visible.length >= filtered.length;
 }
@@ -361,12 +461,16 @@ async function initializeFeedAuth() {
   const supabaseApi = window.supabase;
   if (!supabaseApi?.createClient) { renderFeedSuggestiveControl(); return; }
   const authClient = window.WallverseSupabase || supabaseApi.createClient(WALLVERSE_PUBLIC_CONFIG.supabaseUrl, WALLVERSE_PUBLIC_CONFIG.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+  window.WallverseSupabase = authClient;
+  feedClient = authClient;
   try { const { data } = await authClient.auth.getUser(); feedUser = data.user || null; } catch { feedUser = null; }
-  feedShowSuggestive = feedUser ? savedFeedSuggestive(feedUser.id) : false; renderFeedSuggestiveControl();
+  feedShowSuggestive = feedUser ? savedFeedSuggestive(feedUser.id) : false; renderFeedSuggestiveControl(); updateFeedSortControls();
+  if (feedUser) { feedAlgorithmLoading = loadFeedAlgorithmProfile().catch((error) => { console.warn('For you ranking unavailable.', error); return null; }); }
   authClient.auth.onAuthStateChange((_event, session) => {
     const nextUser = session?.user || null; const nextSuggestive = nextUser ? savedFeedSuggestive(nextUser.id) : false;
     const changed = nextUser?.id !== feedUser?.id || nextSuggestive !== feedShowSuggestive;
-    feedUser = nextUser; feedShowSuggestive = nextSuggestive; renderFeedSuggestiveControl();
+    feedUser = nextUser; feedShowSuggestive = nextSuggestive; feedAlgorithmProfile = null; renderFeedSuggestiveControl(); updateFeedSortControls();
+    feedAlgorithmLoading = nextUser ? loadFeedAlgorithmProfile().then(() => { if (feedSort === 'algorithm') renderFeed(); }).catch((error) => console.warn('For you ranking unavailable.', error)) : null;
     if (feedReady && changed) reloadFeed().catch((error) => console.error(error));
   });
 }
@@ -653,6 +757,12 @@ if (grid && loadMore && spotlightCard) {
   document.getElementById('feed-quality').addEventListener('change', renderFeed);
   document.getElementById('feed-sort-popular').addEventListener('click', () => { feedSort = 'popular'; updateFeedSortControls(); renderFeed(); });
   document.getElementById('feed-sort-recent').addEventListener('click', () => { feedSort = 'recent'; updateFeedSortControls(); renderFeed(); });
+  document.getElementById('feed-sort-algorithm')?.addEventListener('click', async () => {
+    if (!feedUser) return;
+    feedSort = 'algorithm'; updateFeedSortControls();
+    if (!feedAlgorithmProfile && feedAlgorithmLoading) { status.textContent = 'Personalizing your For you feed…'; status.hidden = false; await feedAlgorithmLoading; }
+    renderFeed();
+  });
   document.getElementById('feed-suggestive').addEventListener('change', (event) => {
     if (!feedUser) { event.target.checked = false; return; }
     feedShowSuggestive = event.target.checked; saveFeedSuggestive(feedUser.id, feedShowSuggestive); renderFeedSuggestiveControl();
