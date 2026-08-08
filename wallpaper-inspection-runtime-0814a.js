@@ -30,7 +30,7 @@
   const downloadDialog = document.createElement('dialog');
   downloadDialog.className = 'download-ad-dialog';
   downloadDialog.setAttribute('aria-labelledby', 'download-ad-title');
-  downloadDialog.innerHTML = `<button class="dialog-close download-ad-dialog__close" type="button" data-close-download-ad aria-label="Cancel download">ÃƒÆ’Ã¢â‚¬â€</button><div class="download-ad-dialog__body"><p class="highlight-label">SPONSORED DOWNLOAD</p><h2 id="download-ad-title">Unlock HD Download</h2><p>This short sponsored message helps keep Wallverse free.</p><div class="download-ad-dialog__ad"><span>Advertisement</span><ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-6482601365294880" data-ad-slot="9142050893" data-ad-format="auto" data-full-width-responsive="true"></ins></div><p class="download-ad-dialog__status" id="download-ad-status" role="status" aria-live="polite">Download available in 6ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦</p><div class="download-ad-dialog__actions"><button class="text-button" type="button" data-close-download-ad>Cancel</button><button class="button" id="download-ad-confirm" type="button" disabled>Download HD</button></div></div>`;
+  downloadDialog.innerHTML = `<button class="dialog-close download-ad-dialog__close" type="button" data-close-download-ad aria-label="Cancel download">\u00d7</button><div class="download-ad-dialog__body"><p class="highlight-label">SPONSORED DOWNLOAD</p><h2 id="download-ad-title">Unlock HD Download</h2><p>This short sponsored message helps keep Wallverse free.</p><div class="download-ad-dialog__ad"><span>Advertisement</span><ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-6482601365294880" data-ad-slot="9142050893" data-ad-format="auto" data-full-width-responsive="true"></ins></div><p class="download-ad-dialog__status" id="download-ad-status" role="status" aria-live="polite">Download available in 6\u2026</p><div class="download-ad-dialog__actions"><button class="text-button" type="button" data-close-download-ad>Cancel</button><button class="button" id="download-ad-confirm" type="button" disabled>Download HD</button></div></div>`;
   document.body.append(downloadDialog);
   const downloadStatus = downloadDialog.querySelector('#download-ad-status');
   const downloadConfirm = downloadDialog.querySelector('#download-ad-confirm');
@@ -147,8 +147,8 @@
     window.WallverseCardFrames?.apply(card, frame);
     image.src = helpers.thumbnailUrl(wallpaper); image.alt = wallpaper.title ? `${wallpaper.title} wallpaper card` : 'Wallverse wallpaper card'; image.draggable = false;
     document.getElementById('inspection-title').textContent = wallpaper.title || 'Untitled';
-    const frameLabel = frame === 'default' ? '' : ` Ãƒâ€šÃ‚Â· ${window.WallverseCardFrames.label(frame)}`;
-    document.getElementById('inspection-rarity').textContent = `${tier}${frameLabel}${polished ? ' Ãƒâ€šÃ‚Â· Polished' : ''}`;
+    const frameLabel = frame === 'default' ? '' : ` \u00b7 ${window.WallverseCardFrames.label(frame)}`;
+    document.getElementById('inspection-rarity').textContent = `${tier}${frameLabel}${polished ? ' \u00b7 Polished' : ''}`;
     document.getElementById('inspection-card-stats').replaceChildren(stat(LIKE_ICON, 'Likes', wallpaper.likes_count), stat(DOWNLOAD_ICON, 'Downloads', wallpaper.downloads_count), stat('visibility', 'Views', wallpaper.views_count));
     document.getElementById('inspection-like-count').textContent = helpers.compactNumber(wallpaper.likes_count);
     const creatorProfile = profileFor(wallpaper.profiles);
@@ -161,9 +161,9 @@
     const tags = helpers.tagsFor(wallpaper); const tagsNode = document.getElementById('inspection-tags');
     tagsNode.replaceChildren(...tags.map((tag) => { const node = document.createElement('button'); node.type = 'button'; node.className = 'inspection-tag'; node.textContent = tag; node.setAttribute('aria-label', `Search wallpapers tagged ${tag}`); node.addEventListener('click', () => { dialog.close(); window.dispatchEvent(new CustomEvent('wallverse:feed-search', { detail: { query: tag } })); }); return node; }));
     const facts = [
-      ['Rarity', tier], ['Quality', helpers.qualityLabel(wallpaper.quality) || wallpaper.quality || 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â'],
-      ['Dimensions', wallpaper.width && wallpaper.height ? `${wallpaper.width} ÃƒÆ’Ã¢â‚¬â€ ${wallpaper.height}` : 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â'],
-      ['File size', formatBytes(wallpaper.file_size) || 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â'], ['Published', formatDate(wallpaper.created_at) || 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â'],
+      ['Rarity', tier], ['Quality', helpers.qualityLabel(wallpaper.quality) || wallpaper.quality || '\u2014'],
+      ['Dimensions', wallpaper.width && wallpaper.height ? `${wallpaper.width} \u00d7 ${wallpaper.height}` : '\u2014'],
+      ['File size', formatBytes(wallpaper.file_size) || '\u2014'], ['Published', formatDate(wallpaper.created_at) || '\u2014'],
     ];
     facts.push(['Creator', creatorProfile?.username ? `@${creatorProfile.username}` : '-']);
     document.getElementById('inspection-facts').replaceChildren(...facts.map(([label, value]) => { const group = document.createElement('div'); const term = document.createElement('dt'); const detail = document.createElement('dd'); term.textContent = label; detail.textContent = value; group.append(term, detail); return group; }));
@@ -191,10 +191,10 @@
     clearDownloadCountdown();
     let remaining = 6;
     downloadConfirm.disabled = true;
-    downloadStatus.textContent = `Download available in ${remaining}ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦`;
+    downloadStatus.textContent = `Download available in ${remaining}\u2026`;
     downloadTimer = window.setInterval(() => {
       remaining -= 1;
-      if (remaining > 0) { downloadStatus.textContent = `Download available in ${remaining}ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦`; return; }
+      if (remaining > 0) { downloadStatus.textContent = `Download available in ${remaining}\u2026`; return; }
       clearDownloadCountdown();
       downloadStatus.textContent = 'Ready to download';
       downloadConfirm.disabled = false;
@@ -246,11 +246,11 @@
         window.dispatchEvent(new CustomEvent('wallverse:wallpaper-updated', { detail: { wallpaper: currentWallpaper } }));
       }
     } catch (error) { console.warn('Download could not be recorded.', error); }
-    downloadStatus.textContent = 'Thanks for supporting Wallverse ÃƒÂ¢Ã‚ÂÃ‚Â¤ÃƒÂ¯Ã‚Â¸Ã‚Â';
+    downloadStatus.textContent = 'Thanks for supporting Wallverse \u2764\ufe0f';
   }
   async function loadComments(wallpaperId) {
     const list = document.getElementById('inspection-comment-list'); list.replaceChildren();
-    const loading = document.createElement('p'); loading.textContent = 'Loading commentsÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦'; list.append(loading);
+    const loading = document.createElement('p'); loading.textContent = 'Loading comments\u2026'; list.append(loading);
     const { data, error } = await client.from('comments')
       .select('id,user_id,parent_id,body,is_deleted,likes_count,created_at,profiles!comments_user_id_fkey(username,avatar_url,role)')
       .eq('wallpaper_id', wallpaperId).order('created_at', { ascending: true }).limit(100);
@@ -341,5 +341,3 @@
   dialog.addEventListener('close', () => { if (downloadDialog.open) downloadDialog.close(); window.WallverseWallpaperRouter?.onInspectionClosed?.(); });
   client.auth.onAuthStateChange((_event, session) => { currentUser = session?.user || null; renderAuthState(); if (dialog.open) loadSocialState(); });
 })();
-
-
