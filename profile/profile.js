@@ -132,9 +132,9 @@
   }
   function setAvatar(node) {
     const username = profile?.username || 'W'; node.textContent = username.charAt(0).toUpperCase();
-    window.WallverseCardFrames?.applyAvatar(node, profile?.avatar_frame_type, 'common');
+    window.WallverseCardFrames?.applyAvatar?.(node, profile?.avatar_frame_type, 'common');
     if (!profile?.avatar_url) return;
-    const image = new Image(); image.className = 'avatar__image'; image.alt = ''; image.src = profile.avatar_url; image.onload = () => { node.replaceChildren(image); window.WallverseCardFrames?.applyAvatar(node, profile?.avatar_frame_type, node.dataset.avatarRarity || 'common'); };
+    const image = new Image(); image.className = 'avatar__image'; image.alt = ''; image.src = profile.avatar_url; image.onload = () => { node.replaceChildren(image); window.WallverseCardFrames?.applyAvatar?.(node, profile?.avatar_frame_type, node.dataset.avatarRarity || 'common'); };
   }
   async function ensureProfile(sessionUser) {
     const { data, error } = await client.from('profiles').select('id,username,role,avatar_url,banner_url,followers_count').eq('id', sessionUser.id).maybeSingle();
@@ -299,7 +299,7 @@
       try {
         const totals = await fetchGlobalStats(user.id);
         renderStats(totals);
-        window.WallverseCardFrames?.applyAvatar(document.getElementById('profile-avatar'), profile.avatar_frame_type, window.WallverseCardFrames.creatorRarity(profile, totals));
+        window.WallverseCardFrames?.applyAvatar?.(document.getElementById('profile-avatar'), profile.avatar_frame_type, window.WallverseCardFrames.creatorRarity?.(profile, totals) || 'common');
       } catch (error) { console.warn('Profile statistics unavailable.', error); renderStats({ uploads: 0, likes: 0, downloads: 0, views: 0 }); }
       try {
         document.getElementById('profile-power').textContent = `${compact(await fetchCollectionPower(user.id))} pts`;

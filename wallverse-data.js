@@ -168,9 +168,9 @@ function creatorNode(profile, rarity = 'common') {
     image.className = 'avatar__image';
     image.src = profile.avatar_url;
     image.alt = '';
-    image.onload = () => { avatar.replaceChildren(image); window.WallverseCardFrames?.applyAvatar(avatar, profile.avatar_frame_type, rarity); };
+    image.onload = () => { avatar.replaceChildren(image); window.WallverseCardFrames?.applyAvatar?.(avatar, profile.avatar_frame_type, rarity); };
   }
-  window.WallverseCardFrames?.applyAvatar(avatar, profile.avatar_frame_type, rarity);
+  window.WallverseCardFrames?.applyAvatar?.(avatar, profile.avatar_frame_type, rarity);
   const name = document.createElement('strong');
   name.textContent = `@${username}`;
   creator.append(avatar, name);

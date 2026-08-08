@@ -31,11 +31,11 @@
     node.textContent = username.charAt(0).toUpperCase();
     node.replaceChildren(document.createTextNode(node.textContent));
     const rarity = window.WallverseCardFrames?.creatorRarity(profile) || 'common';
-    window.WallverseCardFrames?.applyAvatar(node, profile?.avatar_frame_type, rarity);
+    window.WallverseCardFrames?.applyAvatar?.(node, profile?.avatar_frame_type, rarity);
     if (!profile?.avatar_url) return;
     const image = new Image();
     image.className = 'avatar__image'; image.alt = ''; image.src = profile.avatar_url;
-    image.onload = () => { node.replaceChildren(image); window.WallverseCardFrames?.applyAvatar(node, profile?.avatar_frame_type, rarity); };
+    image.onload = () => { node.replaceChildren(image); window.WallverseCardFrames?.applyAvatar?.(node, profile?.avatar_frame_type, rarity); };
   }
   function displayName() { return currentProfile?.username || currentUser?.user_metadata?.username || 'Profile'; }
   function setMode(nextMode) {

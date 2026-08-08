@@ -39,10 +39,10 @@
     };
     const addAvatar = (target, profile, rarity = 'common') => {
       target.textContent = (profile?.username || 'W').charAt(0).toUpperCase();
-      window.WallverseCardFrames?.applyAvatar(target, profile?.avatar_frame_type, rarity);
+      window.WallverseCardFrames?.applyAvatar?.(target, profile?.avatar_frame_type, rarity);
       if (!profile?.avatar_url) return;
       const image = new Image(); image.className = 'avatar__image'; image.alt = ''; image.src = profile.avatar_url;
-      image.onload = () => { target.replaceChildren(image); window.WallverseCardFrames?.applyAvatar(target, profile?.avatar_frame_type, rarity); };
+      image.onload = () => { target.replaceChildren(image); window.WallverseCardFrames?.applyAvatar?.(target, profile?.avatar_frame_type, rarity); };
     };
     const cardStat = (icon, label, value) => {
       const node = document.createElement('span'); node.className = `collectible-card__stat collectible-card__stat--${label.toLowerCase()}`;

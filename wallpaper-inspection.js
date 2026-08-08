@@ -60,10 +60,10 @@
   function avatar(profile) {
     const node = document.createElement('span'); node.className = 'avatar avatar--violet'; node.textContent = (profile?.username || 'W').charAt(0).toUpperCase();
     const rarity = window.WallverseCardFrames?.creatorRarity(profile) || 'common';
-    window.WallverseCardFrames?.applyAvatar(node, profile?.avatar_frame_type, rarity);
+    window.WallverseCardFrames?.applyAvatar?.(node, profile?.avatar_frame_type, rarity);
     if (profile?.avatar_url) {
       const avatarImage = new Image(); avatarImage.className = 'avatar__image'; avatarImage.alt = ''; avatarImage.src = profile.avatar_url;
-      avatarImage.onload = () => { node.replaceChildren(avatarImage); window.WallverseCardFrames?.applyAvatar(node, profile?.avatar_frame_type, rarity); };
+      avatarImage.onload = () => { node.replaceChildren(avatarImage); window.WallverseCardFrames?.applyAvatar?.(node, profile?.avatar_frame_type, rarity); };
     }
     return node;
   }
