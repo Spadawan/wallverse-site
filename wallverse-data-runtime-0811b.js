@@ -759,12 +759,12 @@ async function loadPage({ background = false } = {}) {
 async function initialize() {
   try {
     await initializeFeedAuth();
-    // Signed-in sessions must query the authenticated feed so nested user_cards
-    // resolve to the viewer's actual custom frame. The anonymous cache has no
-    // permission to hold that relation.
-    const cachedCatalog = feedUser || feedShowSuggestive ? null : readPublicCatalogCache();
+    // Render the safe public cache immediately whenever it is available. A
+    // signed-in refresh still follows in the background to hydrate the
+    // viewer's own user_cards and their selected custom frames.
+    const cachedCatalog = feedShowSuggestive ? null : readPublicCatalogCache();
     if (cachedCatalog) applyCatalog(cachedCatalog.wallpapers);
-    const catalogWork = !cachedCatalog || !cachedCatalog.fresh
+    const catalogWork = feedUser || !cachedCatalog || !cachedCatalog.fresh
       ? loadPage({ background: Boolean(cachedCatalog) }).catch((error) => {
         if (!cachedCatalog) throw error;
         console.warn('Background catalog refresh unavailable.', error);
