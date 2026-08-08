@@ -751,13 +751,18 @@ async function loadPage({ background = false } = {}) {
   }
   if (requestRevision !== feedRequestRevision) return;
   applyCatalog(allWallpapers);
-  if (!feedShowSuggestive) savePublicCatalogCache(allWallpapers);
+  // A public cache deliberately contains no user_cards due to RLS. Reusing it
+  // for a signed-in session would discard the viewer's card frame selection.
+  if (!feedUser && !feedShowSuggestive) savePublicCatalogCache(allWallpapers);
 }
 
 async function initialize() {
   try {
     await initializeFeedAuth();
-    const cachedCatalog = feedShowSuggestive ? null : readPublicCatalogCache();
+    // Signed-in sessions must query the authenticated feed so nested user_cards
+    // resolve to the viewer's actual custom frame. The anonymous cache has no
+    // permission to hold that relation.
+    const cachedCatalog = feedUser || feedShowSuggestive ? null : readPublicCatalogCache();
     if (cachedCatalog) applyCatalog(cachedCatalog.wallpapers);
     const catalogWork = !cachedCatalog || !cachedCatalog.fresh
       ? loadPage({ background: Boolean(cachedCatalog) }).catch((error) => {
@@ -796,7 +801,7 @@ if (grid && loadMore && spotlightCard) {
   });
   window.addEventListener('wallverse:wallpaper-updated', (event) => {
     const updated = event.detail?.wallpaper; const existing = loadedWallpapers.find((wallpaper) => wallpaper.id === updated?.id);
-    if (existing) { Object.assign(existing, updated); if (!feedShowSuggestive) savePublicCatalogCache(loadedWallpapers); renderFeed(); }
+    if (existing) { Object.assign(existing, updated); if (!feedUser && !feedShowSuggestive) savePublicCatalogCache(loadedWallpapers); renderFeed(); }
   });
   window.addEventListener('wallverse:feed-search', (event) => {
     const search = document.getElementById('feed-search'); if (!search) return;
