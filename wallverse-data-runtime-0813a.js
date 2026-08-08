@@ -32,6 +32,7 @@ const grid = document.getElementById('wallpaper-grid');
 const status = document.getElementById('feed-status');
 const loadMore = document.getElementById('load-more');
 const spotlightCard = document.getElementById('spotlight-card');
+const isHomepageFeed = Boolean(grid && loadMore && spotlightCard);
 let cardIndex = 0;
 let idleObserver;
 let loadedWallpapers = [];
@@ -330,6 +331,7 @@ function renderAdCard(variant = 'grid') {
 const feedTierRank = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4, mythic: 5 };
 function updateFeedSortControls() {
   const popular = document.getElementById('feed-sort-popular'); const recent = document.getElementById('feed-sort-recent'); const algorithm = document.getElementById('feed-sort-algorithm');
+  if (!popular || !recent) return;
   popular.classList.toggle('is-active', feedSort === 'popular'); popular.setAttribute('aria-pressed', String(feedSort === 'popular'));
   recent.classList.toggle('is-active', feedSort === 'recent'); recent.setAttribute('aria-pressed', String(feedSort === 'recent'));
   if (algorithm) {
@@ -541,14 +543,16 @@ async function initializeFeedAuth() {
   } catch { feedUser = null; feedAccessToken = null; }
   feedShowSuggestive = feedUser ? savedFeedSuggestive(feedUser.id) : false; renderFeedSuggestiveControl(); updateFeedSortControls();
   hydrateShopFrameAssignments(feedUser);
-  if (feedUser) { feedAlgorithmLoading = loadFeedAlgorithmProfile().catch((error) => { console.warn('For you ranking unavailable.', error); return null; }); }
+  if (isHomepageFeed && feedUser) { feedAlgorithmLoading = loadFeedAlgorithmProfile().catch((error) => { console.warn('For you ranking unavailable.', error); return null; }); }
   authClient.auth.onAuthStateChange((_event, session) => {
     const nextUser = session?.user || null; const nextSuggestive = nextUser ? savedFeedSuggestive(nextUser.id) : false;
     const changed = nextUser?.id !== feedUser?.id || nextSuggestive !== feedShowSuggestive;
     feedUser = nextUser; feedAccessToken = session?.access_token || null; feedShowSuggestive = nextSuggestive; feedAlgorithmProfile = null; renderFeedSuggestiveControl(); updateFeedSortControls();
     hydrateShopFrameAssignments(nextUser);
-    feedAlgorithmLoading = nextUser ? loadFeedAlgorithmProfile().then(() => { if (feedSort === 'algorithm') renderFeed(); }).catch((error) => console.warn('For you ranking unavailable.', error)) : null;
-    if (feedReady && changed) reloadFeed().catch((error) => console.error(error));
+    if (isHomepageFeed) {
+      feedAlgorithmLoading = nextUser ? loadFeedAlgorithmProfile().then(() => { if (feedSort === 'algorithm') renderFeed(); }).catch((error) => console.warn('For you ranking unavailable.', error)) : null;
+      if (feedReady && changed) reloadFeed().catch((error) => console.error(error));
+    }
   });
 }
 
@@ -842,7 +846,7 @@ async function initialize() {
   }
 }
 
-if (grid && loadMore && spotlightCard) {
+if (isHomepageFeed) {
   loadMore.addEventListener('click', () => { visibleFeedCount += PAGE_SIZE; renderFeed(); });
   document.getElementById('feed-search').addEventListener('input', renderFeed);
   document.getElementById('feed-rarity').addEventListener('change', renderFeed);
@@ -879,6 +883,10 @@ if (grid && loadMore && spotlightCard) {
   document.getElementById('creator-follow')?.addEventListener('click', toggleCreatorFollow);
   window.WallverseSupabase?.auth.onAuthStateChange(() => refreshCreatorFollow().catch((error) => console.warn('Creator follow status unavailable.', error)));
   initialize();
+} else {
+  // Profile and creator routes do not own the public feed, but they still need
+  // the signed-in viewer's shop frame assignments before rendering collections.
+  initializeFeedAuth().catch((error) => console.warn('Shop frame authentication unavailable.', error));
 }
 
 window.WallverseCards = { thumbnailUrl, downloadUrl, wallpaperPath, tagsFor, qualityLabel, compactNumber, publicCardScore, publicCardTier, cardFrameFor, frameForCardRecord, enablePublicCardMotion, createAdCard: renderAdCard, adCardInterval: AD_CARD_INTERVAL };
