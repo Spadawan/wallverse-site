@@ -32,6 +32,9 @@
 /card-frames-v8.css
   Cache-Control: public, max-age=31536000, immutable
 
+/card-frames-v9.css
+  Cache-Control: public, max-age=31536000, immutable
+
 /*.js
   Cache-Control: public, max-age=31536000, immutable
 
