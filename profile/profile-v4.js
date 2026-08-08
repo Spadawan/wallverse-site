@@ -238,7 +238,9 @@
     grid.replaceChildren(...cards.map((ownedCard) => {
       const wallpaper = wallpaperFor(ownedCard);
       const tier = cardTier(wallpaper);
-      const frame = window.WallverseCardFrames?.normalize(ownedCard, ownedCard.card_frame_type, ownedCard.card_frame_id) || 'default';
+      const frame = window.WallverseCards?.frameForCardRecord?.(ownedCard, wallpaper)
+        || window.WallverseCardFrames?.normalize(ownedCard, ownedCard.card_frame_type, ownedCard.card_frame_id)
+        || 'default';
       const polished = wallpaper.polished_until && new Date(wallpaper.polished_until) > new Date();
       const card = document.createElement('a'); card.className = `collectible-card tier--${tier}${polished ? ' is-polished' : ''}`;
       card.href = wallpaperPath(wallpaper);
@@ -360,6 +362,7 @@
     updateCollectionControls();
     if (profileLibrary === 'favorites') applyCollectionView();
   });
+  window.addEventListener('wallverse:frames-ready', () => { if (user && collectionCards.length) applyCollectionView(); });
   document.getElementById('profile-sign-out').addEventListener('click', () => client.auth.signOut());
   client.auth.onAuthStateChange((_event, session) => window.setTimeout(() => load(session?.user), 0));
   client.auth.getSession().then(({ data }) => load(data.session?.user)).catch(() => load(null));

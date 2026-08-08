@@ -57,7 +57,9 @@
     };
     const renderCard = (record) => {
       const wallpaper = wallpaperFor(record); const rarity = tier(wallpaper);
-      const frame = window.WallverseCardFrames?.normalize(record, record?.card_frame_type, record?.card_frame_id) || 'default';
+      const frame = helpers.frameForCardRecord?.(record, wallpaper)
+        || window.WallverseCardFrames?.normalize(record, record?.card_frame_type, record?.card_frame_id)
+        || 'default';
       const polished = wallpaper.polished_until && new Date(wallpaper.polished_until) > new Date();
       const card = document.createElement('a'); card.className = `collectible-card tier--${rarity}${polished ? ' is-polished' : ''}`;
       card.href = wallpaperPath(wallpaper);
@@ -146,6 +148,7 @@
     document.getElementById('creator-rarity').addEventListener('change', render);
     document.getElementById('creator-category').addEventListener('change', render);
     document.querySelectorAll('[data-creator-sort]').forEach((button) => button.addEventListener('click', () => { sort = button.dataset.creatorSort; render(); }));
+    window.addEventListener('wallverse:frames-ready', () => { if (cards.length) render(); });
     load(); return true;
   };
   if (!start()) window.addEventListener('wallverse:data-ready', start, { once: true });

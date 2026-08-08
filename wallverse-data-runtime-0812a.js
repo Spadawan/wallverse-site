@@ -46,6 +46,8 @@ let feedReady = false;
 let creatorSpotlightProfile = null;
 let feedAlgorithmProfile = null;
 let feedAlgorithmLoading = null;
+let shopFramesUserId = null;
+const shopFramesByCardId = new Map();
 const publicRequests = new Map();
 
 function registerIdleCard(card) {
@@ -189,9 +191,27 @@ function cardRecordFor(wallpaper) {
   return active.find((record) => feedUser && record?.owner_id === feedUser.id) || active[0] || null;
 }
 
+function assignedShopFrameFor(record) {
+  // Card IDs are globally unique; a match can only be one of the viewer's
+  // assignments, even in collection queries that do not select owner_id.
+  if (!record?.id || shopFramesUserId !== feedUser?.id) return 'default';
+  return shopFramesByCardId.get(String(record.id)) || 'default';
+}
+
+function frameForCardRecord(record, wallpaper) {
+  // Match Android's FramePackInventory: a valid shop assignment owned by the
+  // signed-in user takes precedence over a frame persisted directly on card.
+  return window.WallverseCardFrames?.normalize(
+    assignedShopFrameFor(record),
+    record,
+    wallpaper?.web_card_frame_type,
+    wallpaper?.card_frame_type,
+    wallpaper?.card_frame_id,
+  ) || 'default';
+}
+
 function cardFrameFor(wallpaper) {
-  const record = cardRecordFor(wallpaper);
-  return window.WallverseCardFrames?.normalize(record, wallpaper?.web_card_frame_type, wallpaper?.card_frame_type, wallpaper?.card_frame_id) || 'default';
+  return frameForCardRecord(cardRecordFor(wallpaper), wallpaper);
 }
 
 function decorateCardFrame(wallpaper) {
@@ -477,6 +497,37 @@ async function reloadFeed() {
   loadedWallpapers = []; visibleFeedCount = PAGE_SIZE; grid.replaceChildren(); grid.setAttribute('aria-busy', 'true');
   status.textContent = 'Loading wallpapers…'; status.hidden = false; await loadPage();
 }
+
+async function hydrateShopFrameAssignments(user) {
+  shopFramesByCardId.clear();
+  shopFramesUserId = user?.id || null;
+  if (!user || !feedClient) {
+    window.dispatchEvent(new Event('wallverse:frames-ready'));
+    return;
+  }
+  try {
+    const [{ data: packs, error: packsError }, { data: assignments, error: assignmentsError }] = await Promise.all([
+      feedClient.from('user_frame_packs').select('pack_id').eq('user_id', user.id),
+      feedClient.from('frame_assignments').select('card_id,pack_id').eq('user_id', user.id),
+    ]);
+    if (packsError) throw packsError;
+    if (assignmentsError) throw assignmentsError;
+    const ownedPacks = new Set((packs || []).map((row) => window.WallverseCardFrames?.normalize(row.pack_id) || 'default'));
+    for (const assignment of assignments || []) {
+      const frame = window.WallverseCardFrames?.normalize(assignment.pack_id) || 'default';
+      if (assignment.card_id && frame !== 'default' && ownedPacks.has(frame)) shopFramesByCardId.set(String(assignment.card_id), frame);
+    }
+  } catch (error) {
+    console.warn('Shop frame assignments unavailable.', error);
+  } finally {
+    if (shopFramesUserId === user.id && loadedWallpapers.length) {
+      loadedWallpapers.forEach(decorateCardFrame);
+      renderFeed();
+    }
+    window.dispatchEvent(new Event('wallverse:frames-ready'));
+  }
+}
+
 async function initializeFeedAuth() {
   const supabaseApi = window.supabase;
   if (!supabaseApi?.createClient) { renderFeedSuggestiveControl(); return; }
@@ -489,11 +540,13 @@ async function initializeFeedAuth() {
     feedAccessToken = sessionData.session?.access_token || null;
   } catch { feedUser = null; feedAccessToken = null; }
   feedShowSuggestive = feedUser ? savedFeedSuggestive(feedUser.id) : false; renderFeedSuggestiveControl(); updateFeedSortControls();
+  hydrateShopFrameAssignments(feedUser);
   if (feedUser) { feedAlgorithmLoading = loadFeedAlgorithmProfile().catch((error) => { console.warn('For you ranking unavailable.', error); return null; }); }
   authClient.auth.onAuthStateChange((_event, session) => {
     const nextUser = session?.user || null; const nextSuggestive = nextUser ? savedFeedSuggestive(nextUser.id) : false;
     const changed = nextUser?.id !== feedUser?.id || nextSuggestive !== feedShowSuggestive;
     feedUser = nextUser; feedAccessToken = session?.access_token || null; feedShowSuggestive = nextSuggestive; feedAlgorithmProfile = null; renderFeedSuggestiveControl(); updateFeedSortControls();
+    hydrateShopFrameAssignments(nextUser);
     feedAlgorithmLoading = nextUser ? loadFeedAlgorithmProfile().then(() => { if (feedSort === 'algorithm') renderFeed(); }).catch((error) => console.warn('For you ranking unavailable.', error)) : null;
     if (feedReady && changed) reloadFeed().catch((error) => console.error(error));
   });
@@ -828,5 +881,5 @@ if (grid && loadMore && spotlightCard) {
   initialize();
 }
 
-window.WallverseCards = { thumbnailUrl, downloadUrl, wallpaperPath, tagsFor, qualityLabel, compactNumber, publicCardScore, publicCardTier, enablePublicCardMotion, createAdCard: renderAdCard, adCardInterval: AD_CARD_INTERVAL };
+window.WallverseCards = { thumbnailUrl, downloadUrl, wallpaperPath, tagsFor, qualityLabel, compactNumber, publicCardScore, publicCardTier, cardFrameFor, frameForCardRecord, enablePublicCardMotion, createAdCard: renderAdCard, adCardInterval: AD_CARD_INTERVAL };
 window.dispatchEvent(new Event('wallverse:data-ready'));

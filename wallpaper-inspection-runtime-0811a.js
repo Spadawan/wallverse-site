@@ -71,6 +71,7 @@
     return active.find((record) => record?.owner_id === currentUser?.id) || active[0] || null;
   }
   function cardFrameFor(wallpaper) {
+    if (typeof helpers.frameForCardRecord === 'function') return helpers.frameForCardRecord(cardRecordFor(wallpaper), wallpaper);
     const record = cardRecordFor(wallpaper);
     return window.WallverseCardFrames?.normalize(record, wallpaper?.web_card_frame_type, wallpaper?.card_frame_type, wallpaper?.card_frame_id) || 'default';
   }
@@ -317,6 +318,9 @@
     if (!event.detail?.wallpaper) return;
     if (window.WallverseWallpaperRouter?.navigate) window.WallverseWallpaperRouter.navigate(event.detail.wallpaper);
     else openInspection(event.detail.wallpaper);
+  });
+  window.addEventListener('wallverse:frames-ready', () => {
+    if (currentWallpaper && dialog.open) renderWallpaper(currentWallpaper);
   });
   likeButton.addEventListener('click', toggleLike); favoriteButton.addEventListener('click', toggleFavorite); commentForm.addEventListener('submit', postComment);
   downloadButton.addEventListener('click', openDownloadGate);
