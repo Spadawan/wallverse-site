@@ -4,6 +4,9 @@
   display:block;
   isolation:isolate;
   opacity:1;
+  /* The neon paint is a frame, not an overlay. Keeping it behind the media
+     preserves the wallpaper while the padded outer contour stays visible. */
+  z-index:1 !important;
 }
 
 .frame--neonrounded > .card-frame-skin {
