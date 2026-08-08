@@ -9,6 +9,23 @@
   z-index:1 !important;
 }
 
+/* Frames must retain a physical perimeter in every grid, including profile
+   collections where compact cards otherwise leave too little outer space. */
+.frame--neonrounded,
+.frame--neongradient {
+  isolation:isolate;
+  overflow:visible !important;
+  padding:11px !important;
+}
+.frame--neonrounded > .collectible-card__media,
+.frame--neongradient > .collectible-card__media {
+  position:relative;
+  z-index:2 !important;
+}
+#wallpaper-grid,
+#profile-wallpaper-grid,
+#creator-grid { overflow:visible; }
+
 .frame--neonrounded > .card-frame-skin {
   border:2px solid transparent;
   border-radius:var(--frame-radius,34px);
@@ -52,4 +69,17 @@
 
 @media (prefers-reduced-motion:reduce) {
   .frame--neongradient > .card-frame-skin { animation:none; }
+}
+
+@media (max-width:760px) {
+  .frame--neonrounded,
+  .frame--neongradient {
+    /* Preserve an obvious neon rim in the two-column mobile layout. */
+    padding:10px !important;
+  }
+  .frame--neonrounded > .card-frame-skin,
+  .frame--neongradient > .card-frame-skin {
+    inset:0 !important;
+    border-width:2px;
+  }
 }
