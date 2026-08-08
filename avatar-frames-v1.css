@@ -1,0 +1,132 @@
+/* Public avatar frames: compact counterparts to Wallverse collectible frames. */
+@property --avatar-frame-angle { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+
+.avatar.avatar-frame {
+  --avatar-frame-tier: var(--avatar-tier, #72e7ff);
+  --avatar-frame-accent: var(--avatar-accent, #9b5cff);
+  position: relative;
+  isolation: isolate;
+  overflow: visible;
+  transform: translateZ(0);
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--avatar-frame-tier) 32%, transparent));
+}
+
+.avatar.avatar-frame .avatar-frame__content {
+  z-index: 3;
+  border: 1px solid rgba(229, 247, 255, .38);
+  box-shadow: inset 0 0 12px rgba(4, 9, 22, .35);
+}
+
+.avatar.avatar-frame::before,
+.avatar.avatar-frame::after {
+  z-index: 2;
+  pointer-events: none;
+  content: '';
+}
+
+.avatar.avatar-frame::before {
+  inset: -3px;
+  padding: 2px;
+  border-radius: inherit;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+.avatar.avatar-frame::after { inset: -5px; z-index: 1; }
+
+/* Neon Rounded — a premium rounded housing with two energy tracers. */
+.avatar.avatar-frame--neonrounded { border-radius: 28% !important; }
+.avatar.avatar-frame--neonrounded .avatar-frame__content { inset: 5px; border-radius: 22%; }
+.avatar.avatar-frame--neonrounded::before {
+  background: conic-gradient(from var(--avatar-frame-angle), var(--avatar-frame-tier), color-mix(in srgb, var(--avatar-frame-tier) 42%, #fff), var(--avatar-frame-accent), #e7fbff, var(--avatar-frame-tier));
+  box-shadow: 0 0 7px color-mix(in srgb, var(--avatar-frame-tier) 82%, transparent), 0 0 16px color-mix(in srgb, var(--avatar-frame-accent) 38%, transparent);
+  animation: avatar-neon-rounded 7s linear infinite;
+}
+.avatar.avatar-frame--neonrounded::after {
+  border-radius: 30%;
+  background: radial-gradient(circle at 10% 12%, #fff 0 2px, color-mix(in srgb, var(--avatar-frame-tier) 82%, transparent) 3px, transparent 7px), radial-gradient(circle at 90% 88%, #fff 0 1.5px, color-mix(in srgb, var(--avatar-frame-accent) 75%, transparent) 3px, transparent 7px);
+  filter: drop-shadow(0 0 5px var(--avatar-frame-tier));
+  animation: avatar-tracer-orbit 6.8s linear infinite;
+}
+
+/* Neon Gradient — circular rings and a slow cyan/blue/violet/magenta sweep. */
+.avatar.avatar-frame--neongradient { border-radius: 50% !important; }
+.avatar.avatar-frame--neongradient .avatar-frame__content { inset: 5px; border-radius: 50%; }
+.avatar.avatar-frame--neongradient::before {
+  inset: -3px;
+  background: conic-gradient(from var(--avatar-frame-angle), #2af4ff, #4b93ff 22%, #805bff 45%, #f05de4 68%, #2af4ff 100%);
+  box-shadow: 0 0 7px rgba(41, 229, 255, .72), 0 0 17px rgba(141, 82, 255, .38);
+  animation: avatar-gradient-sweep 7.8s linear infinite;
+}
+.avatar.avatar-frame--neongradient::after {
+  inset: 2px;
+  border: 1px solid rgba(214, 245, 255, .72);
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(47, 235, 255, .09), 0 0 12px rgba(126, 79, 255, .36), inset 0 0 6px rgba(224, 102, 255, .24);
+  animation: avatar-gradient-breathe 2.8s ease-in-out infinite alternate;
+}
+
+/* Cyberpunk — clipped HUD silhouette, technical rails and scanning accents. */
+.avatar.avatar-frame--cyberpunk,
+.avatar.avatar-frame--cyberpunk .avatar-frame__content {
+  border-radius: 0 !important;
+  clip-path: polygon(16% 0, 84% 0, 100% 16%, 100% 76%, 76% 100%, 16% 100%, 0 84%, 0 16%);
+}
+.avatar.avatar-frame--cyberpunk::before {
+  inset: -3px;
+  padding: 2px;
+  border-radius: 0;
+  background: conic-gradient(from 26deg, #43efff 0 9%, transparent 9% 19%, var(--avatar-frame-tier) 19% 34%, transparent 34% 54%, #8d64ff 54% 67%, transparent 67% 84%, var(--avatar-frame-accent) 84% 94%, transparent 94%);
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--avatar-frame-tier) 78%, transparent));
+  animation: avatar-cyber-scan 3.8s steps(10, end) infinite;
+}
+.avatar.avatar-frame--cyberpunk::after {
+  inset: -6px;
+  opacity: .92;
+  background: linear-gradient(90deg, transparent 0 8%, #4eefff 8% 27%, transparent 27% 73%, #8c66ff 73% 92%, transparent 92%) top / 100% 1px no-repeat, linear-gradient(90deg, transparent 0 19%, #53eaff 19% 42%, transparent 42% 100%) bottom / 100% 1px no-repeat, linear-gradient(180deg, transparent 0 18%, #4defff 18% 39%, transparent 39% 100%) left / 1px 100% no-repeat, linear-gradient(180deg, transparent 0 58%, #986cff 58% 82%, transparent 82%) right / 1px 100% no-repeat;
+  filter: drop-shadow(0 0 4px #40e8ff);
+  animation: avatar-cyber-rails 2.6s linear infinite;
+}
+
+/* Electric — a deliberately unstable silhouette with short electric flashes. */
+.avatar.avatar-frame--electric,
+.avatar.avatar-frame--electric .avatar-frame__content {
+  border-radius: 38% !important;
+  clip-path: polygon(4% 2%, 24% 0, 49% 3%, 74% 0, 97% 4%, 100% 26%, 97% 51%, 100% 76%, 96% 98%, 72% 100%, 48% 97%, 23% 100%, 2% 96%, 0 72%, 3% 48%, 0 22%);
+}
+.avatar.avatar-frame--electric::before {
+  inset: -4px;
+  padding: 2px;
+  border-radius: 40%;
+  background: conic-gradient(from var(--avatar-frame-angle), transparent 0 7%, #fff 10%, var(--avatar-frame-tier) 14%, transparent 20% 43%, #80f2ff 47%, #fff 50%, transparent 55% 77%, var(--avatar-frame-accent) 82%, #fff 85%, transparent 90%);
+  filter: drop-shadow(0 0 4px #fff) drop-shadow(0 0 8px color-mix(in srgb, var(--avatar-frame-tier) 88%, transparent));
+  animation: avatar-electric-orbit 3.1s linear infinite, avatar-electric-pulse 1.9s steps(2, end) infinite;
+}
+.avatar.avatar-frame--electric::after {
+  inset: -7px;
+  opacity: .8;
+  background: linear-gradient(121deg, transparent 41%, #fff 42% 43%, transparent 44%) 10% 4% / 38% 28% no-repeat, linear-gradient(58deg, transparent 45%, #6ff6ff 46% 47%, transparent 48%) 75% 15% / 32% 30% no-repeat, linear-gradient(130deg, transparent 45%, #fff 46% 47%, transparent 48%) 12% 81% / 30% 22% no-repeat, linear-gradient(54deg, transparent 43%, var(--avatar-frame-accent) 44% 45%, transparent 46%) 70% 75% / 34% 25% no-repeat;
+  filter: drop-shadow(0 0 3px #fff) drop-shadow(0 0 7px var(--avatar-frame-tier));
+  animation: avatar-electric-arcs 2.35s steps(2, end) infinite;
+}
+
+@keyframes avatar-neon-rounded { to { --avatar-frame-angle: 360deg; } }
+@keyframes avatar-gradient-sweep { to { --avatar-frame-angle: -360deg; } }
+@keyframes avatar-tracer-orbit { to { transform: rotate(360deg); } }
+@keyframes avatar-gradient-breathe { to { opacity: .5; transform: scale(.94); } }
+@keyframes avatar-cyber-scan { 50% { filter: brightness(1.35) drop-shadow(0 0 7px #49edff); } }
+@keyframes avatar-cyber-rails { 50% { opacity: .38; transform: translateY(1px); } }
+@keyframes avatar-electric-orbit { to { --avatar-frame-angle: 360deg; } }
+@keyframes avatar-electric-pulse { 0%, 70%, 100% { opacity: 1; } 74% { opacity: .42; } 78% { opacity: .88; } }
+@keyframes avatar-electric-arcs { 0%, 35%, 100% { opacity: .18; } 42%, 76% { opacity: .94; } 50% { opacity: .38; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .avatar.avatar-frame::before,
+  .avatar.avatar-frame::after { animation: none !important; }
+}
+
+@media (max-width: 640px) {
+  .avatar.avatar-frame { filter: drop-shadow(0 0 3px color-mix(in srgb, var(--avatar-frame-tier) 30%, transparent)); }
+  .avatar.avatar-frame::after { opacity: .55; }
+}
