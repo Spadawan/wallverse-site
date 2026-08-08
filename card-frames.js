@@ -47,7 +47,7 @@
       rail.className = `card-frame-skin__rail card-frame-skin__rail--${position}`;
       skin.append(rail);
     }
-    for (let index = 1; index <= 4; index += 1) {
+    for (let index = 1; index <= 8; index += 1) {
       const spark = document.createElement('i');
       spark.className = `card-frame-skin__spark card-frame-skin__spark--${index}`;
       skin.append(spark);

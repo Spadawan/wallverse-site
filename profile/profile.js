@@ -216,6 +216,12 @@
       button.classList.toggle('is-active', active);
       button.setAttribute('aria-selected', String(active));
     }
+    const collectionCount = document.getElementById('profile-library-collection-count');
+    const favoritesCount = document.getElementById('profile-library-favorites-count');
+    collectionCount.textContent = compact(collectionCards.length);
+    collectionCount.setAttribute('aria-label', `${collectionCards.length} cards`);
+    favoritesCount.textContent = compact(favoriteCards.length);
+    favoritesCount.setAttribute('aria-label', `${favoriteCards.length} favorites`);
     document.getElementById('profile-wallpapers-title').textContent = profileLibrary === 'favorites' ? 'Your favorites' : 'Your collection';
   }
   function suggestiveStorageKey(ownerId) { return `wallverse-show-suggestive:${ownerId}`; }
@@ -295,6 +301,7 @@
       showSuggestive = savedSuggestivePreference(user.id);
       updateCollectionControls();
       [collectionCards, favoriteCards] = await Promise.all([fetchVisibleCollection(user.id, showSuggestive), fetchFavorites(user.id, showSuggestive)]);
+      updateCollectionControls();
       applyCollectionView();
       try {
         const totals = await fetchGlobalStats(user.id);
@@ -332,6 +339,7 @@
     try {
       [collectionCards, favoriteCards] = await Promise.all([fetchVisibleCollection(user.id, requested), fetchFavorites(user.id, requested)]);
       saveSuggestivePreference(user.id, requested);
+      updateCollectionControls();
       applyCollectionView();
     } catch (error) {
       showSuggestive = !requested;
@@ -349,6 +357,7 @@
       try { favoriteCards = await fetchFavorites(user.id, showSuggestive); }
       catch (error) { console.warn('Favorites could not be refreshed.', error); }
     }
+    updateCollectionControls();
     if (profileLibrary === 'favorites') applyCollectionView();
   });
   document.getElementById('profile-sign-out').addEventListener('click', () => client.auth.signOut());
