@@ -41,6 +41,7 @@ let feedRequestRevision = 0;
 let feedShowSuggestive = false;
 let feedUser = null;
 let feedClient = null;
+let feedAccessToken = null;
 let feedReady = false;
 let creatorSpotlightProfile = null;
 let feedAlgorithmProfile = null;
@@ -145,7 +146,8 @@ async function fetchPublic(table, filters) {
   const query = new URLSearchParams(filters);
   const url = `${WALLVERSE_PUBLIC_CONFIG.supabaseUrl}/rest/v1/${table}?${query}`;
   if (publicRequests.has(url)) return publicRequests.get(url);
-  const request = fetch(url, { headers: apiHeaders })
+  const headers = feedAccessToken ? { ...apiHeaders, Authorization: `Bearer ${feedAccessToken}` } : apiHeaders;
+  const request = fetch(url, { headers })
     .then((response) => {
       if (!response.ok) throw new Error(`Public feed request failed (${response.status})`);
       return response.json();
@@ -159,7 +161,7 @@ function fetchWallpapers(filters) {
   return fetchPublic('wallpapers', { select: SELECT, ...filters });
 }
 
-function creatorNode(profile, rarity = 'common') {
+function creatorNode(profile, rarity = 'common', { framed = false } = {}) {
   const username = profile?.username;
   if (!username) return null;
   const creator = document.createElement('div');
@@ -172,13 +174,29 @@ function creatorNode(profile, rarity = 'common') {
     image.className = 'avatar__image';
     image.src = profile.avatar_url;
     image.alt = '';
-    image.onload = () => { avatar.replaceChildren(image); window.WallverseCardFrames?.applyAvatar?.(avatar, profile.avatar_frame_type, rarity); };
+    image.onload = () => { avatar.replaceChildren(image); if (framed) window.WallverseCardFrames?.applyAvatar?.(avatar, profile.avatar_frame_type, rarity); };
   }
-  window.WallverseCardFrames?.applyAvatar?.(avatar, profile.avatar_frame_type, rarity);
+  if (framed) window.WallverseCardFrames?.applyAvatar?.(avatar, profile.avatar_frame_type, rarity);
   const name = document.createElement('strong');
   name.textContent = `@${username}`;
   creator.append(avatar, name);
   return creator;
+}
+
+function cardRecordFor(wallpaper) {
+  const records = Array.isArray(wallpaper?.user_cards) ? wallpaper.user_cards : (wallpaper?.user_cards ? [wallpaper.user_cards] : []);
+  const active = records.filter((record) => !record?.archived);
+  return active.find((record) => feedUser && record?.owner_id === feedUser.id) || active[0] || null;
+}
+
+function cardFrameFor(wallpaper) {
+  const record = cardRecordFor(wallpaper);
+  return window.WallverseCardFrames?.normalize(record, wallpaper?.web_card_frame_type, wallpaper?.card_frame_type, wallpaper?.card_frame_id) || 'default';
+}
+
+function decorateCardFrame(wallpaper) {
+  if (wallpaper) wallpaper.web_card_frame_type = cardFrameFor(wallpaper);
+  return wallpaper;
 }
 
 function renderCard(wallpaper) {
@@ -231,10 +249,7 @@ function renderCard(wallpaper) {
   info.append(stats);
   imageWrap.append(surface, shine, badges, info);
   card.append(imageWrap);
-  const ownedCard = Array.isArray(wallpaper.user_cards)
-    ? wallpaper.user_cards.find((entry) => !entry.archived && (!feedUser || entry.owner_id === feedUser.id)) || wallpaper.user_cards.find((entry) => !entry.archived)
-    : wallpaper.user_cards;
-  window.WallverseCardFrames?.apply(card, ownedCard, wallpaper);
+  window.WallverseCardFrames?.apply(card, wallpaper.web_card_frame_type || cardFrameFor(wallpaper));
   const inspect = () => window.dispatchEvent(new CustomEvent('wallverse:inspect', { detail: { wallpaper } }));
   card.addEventListener('click', (event) => { event.preventDefault(); inspect(); });
   registerIdleCard(card);
@@ -441,7 +456,7 @@ function savePublicCatalogCache(wallpapers) {
   try { window.localStorage.setItem(PUBLIC_CATALOG_CACHE_KEY, JSON.stringify({ savedAt: Date.now(), wallpapers })); } catch { /* Storage can be unavailable or full. */ }
 }
 function applyCatalog(wallpapers) {
-  loadedWallpapers = [...new Map(wallpapers.map((wallpaper) => [wallpaper.id, wallpaper])).values()];
+  loadedWallpapers = [...new Map(wallpapers.map((wallpaper) => [wallpaper.id, decorateCardFrame(wallpaper)])).values()];
   window.WallversePublicCatalog = loadedWallpapers;
   visibleFeedCount = PAGE_SIZE;
   renderFeed();
@@ -468,13 +483,17 @@ async function initializeFeedAuth() {
   const authClient = window.WallverseSupabase || supabaseApi.createClient(WALLVERSE_PUBLIC_CONFIG.supabaseUrl, WALLVERSE_PUBLIC_CONFIG.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
   window.WallverseSupabase = authClient;
   feedClient = authClient;
-  try { const { data } = await authClient.auth.getUser(); feedUser = data.user || null; } catch { feedUser = null; }
+  try {
+    const [{ data: userData }, { data: sessionData }] = await Promise.all([authClient.auth.getUser(), authClient.auth.getSession()]);
+    feedUser = userData.user || null;
+    feedAccessToken = sessionData.session?.access_token || null;
+  } catch { feedUser = null; feedAccessToken = null; }
   feedShowSuggestive = feedUser ? savedFeedSuggestive(feedUser.id) : false; renderFeedSuggestiveControl(); updateFeedSortControls();
   if (feedUser) { feedAlgorithmLoading = loadFeedAlgorithmProfile().catch((error) => { console.warn('For you ranking unavailable.', error); return null; }); }
   authClient.auth.onAuthStateChange((_event, session) => {
     const nextUser = session?.user || null; const nextSuggestive = nextUser ? savedFeedSuggestive(nextUser.id) : false;
     const changed = nextUser?.id !== feedUser?.id || nextSuggestive !== feedShowSuggestive;
-    feedUser = nextUser; feedShowSuggestive = nextSuggestive; feedAlgorithmProfile = null; renderFeedSuggestiveControl(); updateFeedSortControls();
+    feedUser = nextUser; feedAccessToken = session?.access_token || null; feedShowSuggestive = nextSuggestive; feedAlgorithmProfile = null; renderFeedSuggestiveControl(); updateFeedSortControls();
     feedAlgorithmLoading = nextUser ? loadFeedAlgorithmProfile().then(() => { if (feedSort === 'algorithm') renderFeed(); }).catch((error) => console.warn('For you ranking unavailable.', error)) : null;
     if (feedReady && changed) reloadFeed().catch((error) => console.error(error));
   });
@@ -482,6 +501,7 @@ async function initializeFeedAuth() {
 
 function renderSpotlight(wallpaper, weekly) {
   if (!wallpaper) { spotlightCard.hidden = true; return; }
+  decorateCardFrame(wallpaper);
   const image = document.getElementById('spotlight-image');
   const src = weekly ? spotlightUrl(wallpaper) : thumbnailUrl(wallpaper);
   image.src = src; image.alt = wallpaper.title ? `${wallpaper.title} wallpaper` : 'Wallverse wallpaper';
@@ -524,6 +544,7 @@ function applyFeaturedCard(card, wallpaper) {
   const image = card.querySelector('img');
   const title = card.querySelector('h2');
   if (!wallpaper) { card.hidden = true; return; }
+  decorateCardFrame(wallpaper);
   image.src = thumbnailUrl(wallpaper);
   image.alt = wallpaper.title ? `${wallpaper.title} wallpaper` : 'Featured Wallverse wallpaper';
   image.onerror = () => { card.hidden = true; };
@@ -629,7 +650,7 @@ function renderCreatorSpotlight(profile, bannerUrl, wallpapers) {
     downloads: summary.downloads + (Number(wallpaper.downloads_count) || 0),
     featured: summary.featured + (wallpaper.is_featured ? 1 : 0),
   }), { uploads: 0, likes: 0, downloads: 0, featured: 0 });
-  const creatorContent = creatorNode(profile, window.WallverseCardFrames?.creatorRarity(profile, totals) || 'common');
+  const creatorContent = creatorNode(profile, window.WallverseCardFrames?.creatorRarity(profile, totals) || 'common', { framed: true });
   creator.replaceChildren(...creatorContent.childNodes);
   card.tabIndex = 0;
   card.setAttribute('role', 'button');
@@ -691,7 +712,7 @@ async function toggleCreatorFollow() {
 
 async function loadCreatorSpotlight() {
   const profiles = await fetchPublic('profiles', {
-    select: 'id,username,role,avatar_url,followers_count',
+    select: 'id,username,role,avatar_url,avatar_frame_type,followers_count',
     is_spotlighted: 'eq.true',
     limit: '1',
   });

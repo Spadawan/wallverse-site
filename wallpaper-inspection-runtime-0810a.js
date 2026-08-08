@@ -59,13 +59,20 @@
   }
   function avatar(profile) {
     const node = document.createElement('span'); node.className = 'avatar avatar--violet'; node.textContent = (profile?.username || 'W').charAt(0).toUpperCase();
-    const rarity = window.WallverseCardFrames?.creatorRarity(profile) || 'common';
-    window.WallverseCardFrames?.applyAvatar?.(node, profile?.avatar_frame_type, rarity);
     if (profile?.avatar_url) {
       const avatarImage = new Image(); avatarImage.className = 'avatar__image'; avatarImage.alt = ''; avatarImage.src = profile.avatar_url;
-      avatarImage.onload = () => { node.replaceChildren(avatarImage); window.WallverseCardFrames?.applyAvatar?.(node, profile?.avatar_frame_type, rarity); };
+      avatarImage.onload = () => { node.replaceChildren(avatarImage); };
     }
     return node;
+  }
+  function cardRecordFor(wallpaper) {
+    const records = Array.isArray(wallpaper?.user_cards) ? wallpaper.user_cards : (wallpaper?.user_cards ? [wallpaper.user_cards] : []);
+    const active = records.filter((record) => !record?.archived);
+    return active.find((record) => record?.owner_id === currentUser?.id) || active[0] || null;
+  }
+  function cardFrameFor(wallpaper) {
+    const record = cardRecordFor(wallpaper);
+    return window.WallverseCardFrames?.normalize(record, wallpaper?.web_card_frame_type, wallpaper?.card_frame_type, wallpaper?.card_frame_id) || 'default';
   }
   function renderAuthState() {
     favoriteButton.hidden = !currentUser;
@@ -128,7 +135,7 @@
   }
   function renderWallpaper(wallpaper) {
     const tier = helpers.publicCardTier(wallpaper);
-    const frame = window.WallverseCardFrames?.normalize(wallpaper, wallpaper.web_card_frame_type, wallpaper.card_frame_type, wallpaper.card_frame_id) || 'default';
+    const frame = cardFrameFor(wallpaper);
     const polished = wallpaper.polished_until && new Date(wallpaper.polished_until) > new Date();
     dialog.className = `inspection-dialog tier--${tier}`;
     card.className = `collectible-card inspection-card tier--${tier} is-visible${polished ? ' is-polished' : ''}`;
