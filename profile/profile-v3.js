@@ -251,7 +251,7 @@
       const info = document.createElement('div'); info.className = 'collectible-card__info';
       const title = document.createElement('h3'); title.textContent = wallpaper.title || 'Untitled';
       const stats = document.createElement('div'); stats.className = 'collectible-card__stats';
-      stats.append(cardStat('â™¥', 'Likes', wallpaper.likes_count), cardStat('â†§', 'Downloads', wallpaper.downloads_count), cardStat('visibility', 'Views', wallpaper.views_count));
+      stats.append(cardStat('\u2665', 'Likes', wallpaper.likes_count), cardStat('\u21E9', 'Downloads', wallpaper.downloads_count), cardStat('visibility', 'Views', wallpaper.views_count));
       info.append(title, stats); imageBox.append(surface, shine, info); card.append(imageBox);
       window.WallverseCardFrames?.apply(card, frame);
       const inspect = () => window.dispatchEvent(new CustomEvent('wallverse:inspect', { detail: { wallpaper: { ...wallpaper, web_card_frame_type: frame } } }));
@@ -364,4 +364,3 @@
   client.auth.onAuthStateChange((_event, session) => window.setTimeout(() => load(session?.user), 0));
   client.auth.getSession().then(({ data }) => load(data.session?.user)).catch(() => load(null));
 })();
-

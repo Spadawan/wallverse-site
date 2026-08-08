@@ -1,0 +1,52 @@
+/* Reliable premium border layers for the two rounded neon store frames. */
+.frame--neonrounded > .card-frame-skin,
+.frame--neongradient > .card-frame-skin {
+  display:block;
+  isolation:isolate;
+  opacity:1;
+}
+
+.frame--neonrounded > .card-frame-skin {
+  border:2px solid transparent;
+  border-radius:var(--frame-radius,34px);
+  background:linear-gradient(transparent,transparent) padding-box,linear-gradient(135deg,color-mix(in srgb,var(--tier) 92%,#fff),color-mix(in srgb,var(--accent) 82%,var(--tier)) 42%,#fff 56%,var(--tier) 72%,color-mix(in srgb,var(--accent) 76%,#fff)) border-box;
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--tier) 64%,transparent),0 0 13px color-mix(in srgb,var(--tier) 54%,transparent),0 0 28px color-mix(in srgb,var(--accent) 26%,transparent);
+}
+.frame--neonrounded > .card-frame-skin::before {
+  inset:0;
+  padding:0;
+  border-radius:inherit;
+  background:transparent;
+  filter:none;
+}
+.frame--neonrounded > .card-frame-skin::after {
+  inset:5px;
+  border-color:color-mix(in srgb,#fff 36%,var(--tier));
+  opacity:.9;
+  box-shadow:inset 0 0 10px color-mix(in srgb,var(--tier) 20%,transparent),0 0 11px color-mix(in srgb,var(--accent) 22%,transparent);
+}
+
+.frame--neongradient > .card-frame-skin {
+  border:2px solid transparent;
+  border-radius:32px;
+  background:linear-gradient(transparent,transparent) padding-box,conic-gradient(from var(--frame-angle),#23f4ff 0deg,#267eff 68deg,#7155ff 140deg,#d84bff 214deg,#ff70db 282deg,#23f4ff 360deg) border-box;
+  box-shadow:0 0 0 1px rgba(46,200,255,.44),0 0 15px rgba(40,184,255,.4),0 0 31px rgba(151,72,255,.24);
+  animation:gradient-frame-orbit 7.2s linear infinite;
+}
+.frame--neongradient > .card-frame-skin::before {
+  inset:0;
+  padding:0;
+  border-radius:inherit;
+  background:transparent;
+  filter:none;
+}
+.frame--neongradient > .card-frame-skin::after {
+  inset:5px;
+  border-color:rgba(208,239,255,.56);
+  opacity:.76;
+  box-shadow:inset 0 0 12px rgba(73,119,255,.15),0 0 10px rgba(40,243,255,.17);
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .frame--neongradient > .card-frame-skin { animation:none; }
+}
