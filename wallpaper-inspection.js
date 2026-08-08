@@ -237,7 +237,7 @@
     const list = document.getElementById('inspection-comment-list'); list.replaceChildren();
     const loading = document.createElement('p'); loading.textContent = 'Loading comments…'; list.append(loading);
     const { data, error } = await client.from('comments')
-      .select('id,user_id,parent_id,body,is_deleted,likes_count,created_at,profiles!comments_user_id_fkey(username,avatar_url,avatar_frame_type,role)')
+      .select('id,user_id,parent_id,body,is_deleted,likes_count,created_at,profiles!comments_user_id_fkey(username,avatar_url,role)')
       .eq('wallpaper_id', wallpaperId).order('created_at', { ascending: true }).limit(100);
     if (currentWallpaper?.id !== wallpaperId) return;
     if (error) { loading.textContent = 'Comments are unavailable right now.'; return; }

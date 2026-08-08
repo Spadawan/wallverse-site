@@ -58,7 +58,7 @@
   }
   function openAuth() { setMode('sign-in'); authDialog.showModal(); emailInput.focus(); }
   async function fetchProfile(user) {
-    const { data, error } = await client.from('profiles').select('id,username,role,avatar_url,avatar_frame_type,followers_count').eq('id', user.id).maybeSingle();
+    const { data, error } = await client.from('profiles').select('id,username,role,avatar_url,followers_count').eq('id', user.id).maybeSingle();
     if (error) throw error;
     return data;
   }

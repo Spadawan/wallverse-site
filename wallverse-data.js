@@ -4,8 +4,8 @@ const WALLVERSE_PUBLIC_CONFIG = {
   r2PublicBaseUrl: 'https://images.wallverse.win',
 };
 
-const SELECT = 'id,user_id,title,description,image_url,thumbnail_url,category,quality,width,height,file_size,likes_count,downloads_count,views_count,is_ai,is_suggestive,is_weekly,is_featured,polished_until,created_at,storage_provider,thumbnail_storage_key,hd_storage_key,profiles!wallpapers_user_id_fkey(username,role,avatar_url,avatar_frame_type),wallpaper_tags(tags(name))';
-const SPOTLIGHT_SELECT = 'id,title,image_url,thumbnail_url,category,quality,is_weekly,is_featured,storage_provider,thumbnail_storage_key,hd_storage_key,profiles!wallpapers_user_id_fkey(username,role,avatar_url,avatar_frame_type),wallpaper_tags(tags(name))';
+const SELECT = 'id,user_id,title,description,image_url,thumbnail_url,category,quality,width,height,file_size,likes_count,downloads_count,views_count,is_ai,is_suggestive,is_weekly,is_featured,polished_until,created_at,storage_provider,thumbnail_storage_key,hd_storage_key,profiles!wallpapers_user_id_fkey(username,avatar_url),wallpaper_tags(tags(name))';
+const SPOTLIGHT_SELECT = 'id,title,image_url,thumbnail_url,category,quality,is_weekly,is_featured,storage_provider,thumbnail_storage_key,hd_storage_key,profiles!wallpapers_user_id_fkey(username,avatar_url),wallpaper_tags(tags(name))';
 const FEATURED_SELECT = SELECT;
 const CREATOR_STATS_SELECT = 'id,quality,likes_count,downloads_count,views_count,is_featured,is_weekly';
 const PAGE_SIZE = 12;
@@ -582,7 +582,7 @@ async function toggleCreatorFollow() {
 
 async function loadCreatorSpotlight() {
   const profiles = await fetchPublic('profiles', {
-    select: 'id,username,role,avatar_url,avatar_frame_type,followers_count',
+    select: 'id,username,role,avatar_url,followers_count',
     is_spotlighted: 'eq.true',
     limit: '1',
   });

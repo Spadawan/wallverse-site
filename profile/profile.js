@@ -13,7 +13,7 @@
   let profileLibrary = 'collection';
   let collectionSort = 'popular';
   let showSuggestive = false;
-  const wallpaperFields = 'id,user_id,title,description,image_url,thumbnail_url,category,quality,width,height,file_size,likes_count,downloads_count,views_count,is_featured,is_weekly,polished_until,status,is_suggestive,created_at,storage_provider,thumbnail_storage_key,hd_storage_key,profiles!wallpapers_user_id_fkey(username,role,avatar_url,avatar_frame_type),wallpaper_tags(tags(name))';
+  const wallpaperFields = 'id,user_id,title,description,image_url,thumbnail_url,category,quality,width,height,file_size,likes_count,downloads_count,views_count,is_featured,is_weekly,polished_until,status,is_suggestive,created_at,storage_provider,thumbnail_storage_key,hd_storage_key,profiles!wallpapers_user_id_fkey(username,avatar_url),wallpaper_tags(tags(name))';
 
   function setupHero() {
     const identity = hero.querySelector('.profile-hero__identity');
@@ -137,14 +137,14 @@
     const image = new Image(); image.className = 'avatar__image'; image.alt = ''; image.src = profile.avatar_url; image.onload = () => { node.replaceChildren(image); window.WallverseCardFrames?.applyAvatar(node, profile?.avatar_frame_type, node.dataset.avatarRarity || 'common'); };
   }
   async function ensureProfile(sessionUser) {
-    const { data, error } = await client.from('profiles').select('id,username,role,avatar_url,avatar_frame_type,banner_url,followers_count').eq('id', sessionUser.id).maybeSingle();
+    const { data, error } = await client.from('profiles').select('id,username,role,avatar_url,banner_url,followers_count').eq('id', sessionUser.id).maybeSingle();
     if (error) throw error;
     if (data) return data;
     const source = String(sessionUser.user_metadata?.username || sessionUser.email?.split('@')[0] || 'user').replace(/[^A-Za-z0-9_]/g, '').slice(0, 14);
     const username = userPattern.test(source) ? source : `user_${sessionUser.id.slice(0, 6)}`;
     const { error: insertError } = await client.from('profiles').insert({ id: sessionUser.id, username });
     if (insertError) throw insertError;
-    const { data: created, error: createdError } = await client.from('profiles').select('id,username,role,avatar_url,avatar_frame_type,banner_url,followers_count').eq('id', sessionUser.id).single();
+    const { data: created, error: createdError } = await client.from('profiles').select('id,username,role,avatar_url,banner_url,followers_count').eq('id', sessionUser.id).single();
     if (createdError) throw createdError;
     return created;
   }
