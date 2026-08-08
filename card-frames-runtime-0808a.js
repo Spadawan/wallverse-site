@@ -91,4 +91,3 @@
 
   window.WallverseCardFrames = Object.freeze({ apply, applyAvatar, creatorRarity, label, normalize, supported: [...supported] });
 })();
-
