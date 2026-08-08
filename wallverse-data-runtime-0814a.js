@@ -10,6 +10,7 @@ const SPOTLIGHT_SELECT = `id,title,image_url,thumbnail_url,category,quality,is_w
 const FEATURED_SELECT = SELECT;
 const CREATOR_STATS_SELECT = 'id,quality,likes_count,downloads_count,views_count,is_featured,is_weekly';
 const PAGE_SIZE = 12;
+const MAX_RENDERED_CARDS = PAGE_SIZE * 3;
 const FEED_CATALOG_PAGE_SIZE = 1000;
 const AD_CARD_INTERVAL = 12;
 const ADSENSE_CLIENT = 'ca-pub-6482601365294880';
@@ -38,6 +39,7 @@ let idleObserver;
 let loadedWallpapers = [];
 let feedSort = 'popular';
 let visibleFeedCount = PAGE_SIZE;
+let feedWindowStart = 0;
 let feedRequestRevision = 0;
 let feedShowSuggestive = false;
 let feedUser = null;
@@ -430,6 +432,11 @@ function algorithmSortedFeed(wallpapers) {
   const seen = scored.filter(({ wallpaper }) => profile.interactedWallpaperIds.has(wallpaper.id));
   return [...unseen, ...seen].map(({ wallpaper }) => wallpaper);
 }
+function resetFeedWindow() {
+  feedWindowStart = 0;
+  visibleFeedCount = PAGE_SIZE;
+}
+
 function renderFeed() {
   const query = document.getElementById('feed-search')?.value.trim().toLocaleLowerCase() || '';
   const rarity = document.getElementById('feed-rarity')?.value || 'all';
@@ -444,7 +451,9 @@ function renderFeed() {
     if (feedSort === 'recent') return new Date(right.created_at || 0) - new Date(left.created_at || 0);
     return feedTierRank[publicCardTier(right)] - feedTierRank[publicCardTier(left)] || publicCardScore(right) - publicCardScore(left) || new Date(right.created_at || 0) - new Date(left.created_at || 0);
   });
-  const visible = filtered.slice(0, visibleFeedCount);
+  const maxStart = Math.max(0, filtered.length - visibleFeedCount);
+  feedWindowStart = Math.min(feedWindowStart, maxStart);
+  const visible = filtered.slice(feedWindowStart, feedWindowStart + visibleFeedCount);
   idleObserver?.disconnect();
   const feedItems = [];
   visible.forEach((wallpaper, index) => {
@@ -453,9 +462,15 @@ function renderFeed() {
   });
   grid.replaceChildren(...feedItems);
   const algorithmNote = feedSort === 'algorithm' && feedAlgorithmProfile?.signalCount < 2 ? ' Save, like or download wallpapers to personalize this feed.' : '';
-  status.textContent = filtered.length ? `Showing ${visible.length} of ${filtered.length} public wallpapers.${algorithmNote}` : 'No public wallpapers match these filters.';
+  const visibleEnd = feedWindowStart + visible.length;
+  const visibleRange = visible.length ? `${feedWindowStart + 1}–${visibleEnd}` : '0';
+  status.textContent = filtered.length ? `Showing ${visibleRange} of ${filtered.length} public wallpapers.${algorithmNote}` : 'No public wallpapers match these filters.';
   status.hidden = false;
-  loadMore.hidden = visible.length >= filtered.length;
+  const previous = document.getElementById('load-previous');
+  previous.hidden = feedWindowStart === 0;
+  previous.disabled = feedWindowStart === 0;
+  loadMore.hidden = visibleEnd >= filtered.length;
+  loadMore.textContent = visibleFeedCount < MAX_RENDERED_CARDS ? 'Load more' : 'Show next';
 }
 
 function feedSuggestiveKey(userId) { return `wallverse-show-suggestive:${userId}`; }
@@ -480,7 +495,7 @@ function savePublicCatalogCache(wallpapers) {
 function applyCatalog(wallpapers) {
   loadedWallpapers = [...new Map(wallpapers.map((wallpaper) => [wallpaper.id, decorateCardFrame(wallpaper)])).values()];
   window.WallversePublicCatalog = loadedWallpapers;
-  visibleFeedCount = PAGE_SIZE;
+  resetFeedWindow();
   renderFeed();
   grid.setAttribute('aria-busy', 'false');
   loadMore.disabled = false;
@@ -496,7 +511,7 @@ function renderFeedSuggestiveControl() {
   else label.dataset.tooltip = 'Sign in to show suggestive content.';
 }
 async function reloadFeed() {
-  loadedWallpapers = []; visibleFeedCount = PAGE_SIZE; grid.replaceChildren(); grid.setAttribute('aria-busy', 'true');
+  loadedWallpapers = []; resetFeedWindow(); grid.replaceChildren(); grid.setAttribute('aria-busy', 'true');
   status.textContent = 'Loading wallpapers…'; status.hidden = false; await loadPage();
 }
 
@@ -847,16 +862,23 @@ async function initialize() {
 }
 
 if (isHomepageFeed) {
-  loadMore.addEventListener('click', () => { visibleFeedCount += PAGE_SIZE; renderFeed(); });
-  document.getElementById('feed-search').addEventListener('input', renderFeed);
-  document.getElementById('feed-rarity').addEventListener('change', renderFeed);
-  document.getElementById('feed-category').addEventListener('change', renderFeed);
-  document.getElementById('feed-quality').addEventListener('change', renderFeed);
-  document.getElementById('feed-sort-popular').addEventListener('click', () => { feedSort = 'popular'; updateFeedSortControls(); renderFeed(); });
-  document.getElementById('feed-sort-recent').addEventListener('click', () => { feedSort = 'recent'; updateFeedSortControls(); renderFeed(); });
+  const loadPrevious = document.getElementById('load-previous');
+  loadMore.addEventListener('click', () => {
+    if (visibleFeedCount < MAX_RENDERED_CARDS) visibleFeedCount = Math.min(MAX_RENDERED_CARDS, visibleFeedCount + PAGE_SIZE);
+    else feedWindowStart += PAGE_SIZE;
+    renderFeed();
+  });
+  loadPrevious.addEventListener('click', () => { feedWindowStart = Math.max(0, feedWindowStart - PAGE_SIZE); renderFeed(); });
+  const resetAndRenderFeed = () => { resetFeedWindow(); renderFeed(); };
+  document.getElementById('feed-search').addEventListener('input', resetAndRenderFeed);
+  document.getElementById('feed-rarity').addEventListener('change', resetAndRenderFeed);
+  document.getElementById('feed-category').addEventListener('change', resetAndRenderFeed);
+  document.getElementById('feed-quality').addEventListener('change', resetAndRenderFeed);
+  document.getElementById('feed-sort-popular').addEventListener('click', () => { feedSort = 'popular'; resetFeedWindow(); updateFeedSortControls(); renderFeed(); });
+  document.getElementById('feed-sort-recent').addEventListener('click', () => { feedSort = 'recent'; resetFeedWindow(); updateFeedSortControls(); renderFeed(); });
   document.getElementById('feed-sort-algorithm')?.addEventListener('click', async () => {
     if (!feedUser) return;
-    feedSort = 'algorithm'; updateFeedSortControls();
+    feedSort = 'algorithm'; resetFeedWindow(); updateFeedSortControls();
     if (!feedAlgorithmProfile && feedAlgorithmLoading) { status.textContent = 'Personalizing your For you feed…'; status.hidden = false; await feedAlgorithmLoading; }
     renderFeed();
   });
@@ -872,7 +894,7 @@ if (isHomepageFeed) {
   window.addEventListener('wallverse:feed-search', (event) => {
     const search = document.getElementById('feed-search'); if (!search) return;
     search.value = event.detail?.query || '';
-    renderFeed();
+    resetFeedWindow(); renderFeed();
     document.getElementById('for-you')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     window.setTimeout(() => search.focus({ preventScroll: true }), 380);
   });
