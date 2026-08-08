@@ -1,0 +1,26 @@
+@media (hover:hover) and (pointer:fine) {
+  .effects-control{position:fixed;right:12px;bottom:12px;z-index:2147483000;display:flex;align-items:center;gap:5px;padding:4px 5px 4px 8px;border:1px solid rgba(118,163,225,.25);border-radius:999px;background:rgba(5,12,27,.82);box-shadow:0 8px 25px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.06);backdrop-filter:blur(14px);color:#9fb0cb;font:700 9px/1 Inter,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;opacity:.66;transition:opacity .18s ease,border-color .18s ease}
+  .effects-control:hover,.effects-control:focus-within{opacity:1;border-color:rgba(40,243,255,.42)}
+  .effects-control__options{display:flex;gap:2px}
+  .effects-control button{min-height:23px;padding:3px 7px;border:0;border-radius:999px;color:#8797b3;background:transparent;cursor:pointer;font:700 9px/1 Inter,system-ui,sans-serif;transition:color .15s ease,background .15s ease,box-shadow .15s ease}
+  .effects-control button:hover,.effects-control button:focus-visible{outline:0;color:#fff;background:rgba(255,255,255,.08)}
+  .effects-control button.is-active{color:#06101e;background:linear-gradient(135deg,#b45cff,#28f3ff);box-shadow:0 0 12px rgba(40,243,255,.25)}
+}
+@media (hover:none),(pointer:coarse){.effects-control{display:none!important}}
+
+html[data-effects="medium"] .wallverse-cursor-trail,
+html[data-effects="low"] .wallverse-cursor-trail{display:none!important}
+html[data-effects="medium"] .experience-letter,
+html[data-effects="low"] .experience-letter{transform:none!important;transition:none!important;color:inherit!important}
+html[data-effects="medium"] .nav a:hover,
+html[data-effects="medium"] .nav a:focus-visible,
+html[data-effects="low"] .nav a:hover,
+html[data-effects="low"] .nav a:focus-visible{transform:none!important}
+html[data-effects="low"],html[data-effects="low"] body,html[data-effects="low"] body *{cursor:auto!important}
+html[data-effects="low"] a,html[data-effects="low"] button,html[data-effects="low"] [role="button"],html[data-effects="low"] summary{cursor:pointer!important}
+html[data-effects="low"] .wallverse-cursor{display:none!important}
+html[data-effects="low"] .collectible-card,
+html[data-effects="low"] .collectible-card:hover{--card-rx:0deg!important;--card-ry:0deg!important;transform:perspective(900px) rotateX(0) rotateY(0) translate3d(0,0,0)!important}
+html[data-effects="low"] .featured-card:hover,
+html[data-effects="low"] .spotlight-card:hover,
+html[data-effects="low"] .creator-spotlight:hover{transform:none!important}

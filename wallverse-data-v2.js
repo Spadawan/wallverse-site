@@ -4,8 +4,9 @@ const WALLVERSE_PUBLIC_CONFIG = {
   r2PublicBaseUrl: 'https://images.wallverse.win',
 };
 
-const SELECT = 'id,user_id,title,description,image_url,thumbnail_url,category,quality,width,height,file_size,likes_count,downloads_count,views_count,is_ai,is_suggestive,is_weekly,is_featured,polished_until,created_at,storage_provider,thumbnail_storage_key,hd_storage_key,profiles!wallpapers_user_id_fkey(username,avatar_url),wallpaper_tags(tags(name))';
-const SPOTLIGHT_SELECT = 'id,title,image_url,thumbnail_url,category,quality,is_weekly,is_featured,storage_provider,thumbnail_storage_key,hd_storage_key,profiles!wallpapers_user_id_fkey(username,avatar_url),wallpaper_tags(tags(name))';
+const CARD_RELATION = 'user_cards(id,owner_id,card_frame_id,card_frame_type,archived,acquired_at)';
+const SELECT = `id,user_id,title,description,image_url,thumbnail_url,category,quality,width,height,file_size,likes_count,downloads_count,views_count,is_ai,is_suggestive,is_weekly,is_featured,polished_until,created_at,storage_provider,thumbnail_storage_key,hd_storage_key,profiles!wallpapers_user_id_fkey(username,avatar_url,avatar_frame_type),wallpaper_tags(tags(name)),${CARD_RELATION}`;
+const SPOTLIGHT_SELECT = `id,title,image_url,thumbnail_url,category,quality,is_weekly,is_featured,storage_provider,thumbnail_storage_key,hd_storage_key,profiles!wallpapers_user_id_fkey(username,avatar_url,avatar_frame_type),wallpaper_tags(tags(name)),${CARD_RELATION}`;
 const FEATURED_SELECT = SELECT;
 const CREATOR_STATS_SELECT = 'id,quality,likes_count,downloads_count,views_count,is_featured,is_weekly';
 const PAGE_SIZE = 12;
@@ -230,6 +231,10 @@ function renderCard(wallpaper) {
   info.append(stats);
   imageWrap.append(surface, shine, badges, info);
   card.append(imageWrap);
+  const ownedCard = Array.isArray(wallpaper.user_cards)
+    ? wallpaper.user_cards.find((entry) => !entry.archived && (!feedUser || entry.owner_id === feedUser.id)) || wallpaper.user_cards.find((entry) => !entry.archived)
+    : wallpaper.user_cards;
+  window.WallverseCardFrames?.apply(card, ownedCard, wallpaper);
   const inspect = () => window.dispatchEvent(new CustomEvent('wallverse:inspect', { detail: { wallpaper } }));
   card.addEventListener('click', (event) => { event.preventDefault(); inspect(); });
   registerIdleCard(card);
