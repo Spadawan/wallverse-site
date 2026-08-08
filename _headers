@@ -14,7 +14,22 @@
 /styles-v2.css
   Cache-Control: public, max-age=31536000, immutable
 
+/styles-v3.css
+  Cache-Control: public, max-age=31536000, immutable
+
 /card-frames-v3.css
+  Cache-Control: public, max-age=31536000, immutable
+
+/card-frames-v4.css
+  Cache-Control: public, max-age=31536000, immutable
+
+/card-frames-v5.css
+  Cache-Control: public, max-age=31536000, immutable
+
+/card-frames-v7.css
+  Cache-Control: public, max-age=31536000, immutable
+
+/card-frames-v8.css
   Cache-Control: public, max-age=31536000, immutable
 
 /*.js
