@@ -756,6 +756,13 @@ async function loadPage({ background = false } = {}) {
   if (!feedUser && !feedShowSuggestive) savePublicCatalogCache(allWallpapers);
 }
 
+async function loadInitialCatalog() {
+  const filters = { status: 'eq.approved', order: 'created_at.desc', limit: String(Math.max(PAGE_SIZE * 2, 24)), offset: '0' };
+  if (!feedShowSuggestive) filters.is_suggestive = 'eq.false';
+  const rows = await fetchWallpapers(filters);
+  applyCatalog(rows);
+}
+
 async function initialize() {
   try {
     await initializeFeedAuth();
@@ -764,9 +771,11 @@ async function initialize() {
     // viewer's own user_cards and their selected custom frames.
     const cachedCatalog = feedShowSuggestive ? null : readPublicCatalogCache();
     if (cachedCatalog) applyCatalog(cachedCatalog.wallpapers);
+    if (!cachedCatalog) await loadInitialCatalog();
     const catalogWork = feedUser || !cachedCatalog || !cachedCatalog.fresh
-      ? loadPage({ background: Boolean(cachedCatalog) }).catch((error) => {
-        if (!cachedCatalog) throw error;
+      ? loadPage({ background: true }).catch((error) => {
+        // The visible cache or first page remains useful if the larger catalog
+        // refresh fails or is delayed by a slow connection.
         console.warn('Background catalog refresh unavailable.', error);
       })
       : Promise.resolve();
