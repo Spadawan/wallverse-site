@@ -122,8 +122,9 @@
     const load = async () => {
       if (!creatorId) { fail('This creator profile is unavailable.'); return; }
       try {
-        const [{ data: profile, error: profileError }, uploaded, owned] = await Promise.all([
+        const [{ data: profile, error: profileError }, uploaded, visibleUploaded, owned] = await Promise.all([
           client.from('profiles').select('id,username,role,avatar_url,banner_url,followers_count,avatar_frame_type').eq('id', creatorId).maybeSingle(),
+          allPages((offset) => client.from('wallpapers').select(fields).eq('user_id', creatorId).eq('status', 'approved').order('created_at', { ascending: false }).range(offset, offset + 999)),
           allPages((offset) => client.from('wallpapers').select(fields).eq('user_id', creatorId).eq('status', 'approved').eq('is_suggestive', false).order('created_at', { ascending: false }).range(offset, offset + 999)),
           allPages((offset) => client.from('user_cards').select(`id,acquired_at,card_frame_id,card_frame_type,wallpapers!inner(${fields})`).eq('owner_id', creatorId).eq('wallpapers.status', 'approved').eq('wallpapers.is_suggestive', false).order('acquired_at', { ascending: false }).range(offset, offset + 999)).catch(() => []),
         ]);
@@ -137,7 +138,10 @@
           banner.src = profile.banner_url; banner.hidden = false;
           banner.onerror = () => { banner.hidden = true; };
         }
-        cards = owned.length ? owned : uploaded;
+        // The statistics represent every approved upload. The visible grid
+        // still follows the public safe-content rule until suggestive content
+        // is explicitly enabled on a future creator page control.
+        cards = owned.length ? owned : visibleUploaded;
         const creatorTotals = renderStats(uploaded, owned.length);
         addAvatar(document.getElementById('creator-avatar'), profile, window.WallverseCardFrames?.creatorRarity(profile, creatorTotals) || 'common');
         render();
