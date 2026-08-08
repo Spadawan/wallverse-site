@@ -9,8 +9,11 @@
   let profile = null;
   let user = null;
   let collectionCards = [];
+  let favoriteCards = [];
+  let profileLibrary = 'collection';
   let collectionSort = 'popular';
   let showSuggestive = false;
+  const wallpaperFields = 'id,user_id,title,description,image_url,thumbnail_url,category,quality,width,height,file_size,likes_count,downloads_count,views_count,is_featured,is_weekly,polished_until,status,is_suggestive,created_at,storage_provider,thumbnail_storage_key,hd_storage_key,profiles!wallpapers_user_id_fkey(username,role,avatar_url,avatar_frame_type),wallpaper_tags(tags(name))';
 
   function setupHero() {
     const identity = hero.querySelector('.profile-hero__identity');
@@ -89,7 +92,7 @@
     let offset = 0;
     while (true) {
       let request = client.from('user_cards')
-        .select('id,acquired_at,card_frame_id,card_frame_type,archived,wallpapers!inner(id,user_id,title,description,image_url,thumbnail_url,category,quality,width,height,file_size,likes_count,downloads_count,views_count,is_featured,is_weekly,polished_until,status,is_suggestive,storage_provider,thumbnail_storage_key,hd_storage_key,profiles!wallpapers_user_id_fkey(username,avatar_url),wallpaper_tags(tags(name)))')
+        .select(`id,acquired_at,card_frame_id,card_frame_type,archived,wallpapers!inner(${wallpaperFields})`)
         .eq('owner_id', ownerId)
         .eq('wallpapers.status', 'approved')
         .order('acquired_at', { ascending: false })
@@ -107,20 +110,41 @@
       return !hidden.has(card.id) && Boolean(wallpaper);
     });
   }
+  async function fetchFavorites(ownerId, includeSuggestive = false) {
+    const favorites = [];
+    let offset = 0;
+    while (true) {
+      let request = client.from('wallpapers')
+        .select(`${wallpaperFields},favorites!inner(user_id)`)
+        .eq('favorites.user_id', ownerId)
+        .eq('status', 'approved')
+        .order('created_at', { ascending: false })
+        .range(offset, offset + 999);
+      if (!includeSuggestive) request = request.eq('is_suggestive', false);
+      const { data, error } = await request;
+      if (error) throw error;
+      const page = data || [];
+      favorites.push(...page.map((wallpaper) => ({ id: `favorite-${wallpaper.id}`, acquired_at: wallpaper.created_at, is_favorite: true, wallpapers: wallpaper })));
+      if (page.length < 1000) break;
+      offset += 1000;
+    }
+    return favorites;
+  }
   function setAvatar(node) {
     const username = profile?.username || 'W'; node.textContent = username.charAt(0).toUpperCase();
+    window.WallverseCardFrames?.applyAvatar(node, profile?.avatar_frame_type, 'common');
     if (!profile?.avatar_url) return;
-    const image = new Image(); image.className = 'avatar__image'; image.alt = ''; image.src = profile.avatar_url; image.onload = () => node.replaceChildren(image);
+    const image = new Image(); image.className = 'avatar__image'; image.alt = ''; image.src = profile.avatar_url; image.onload = () => { node.replaceChildren(image); window.WallverseCardFrames?.applyAvatar(node, profile?.avatar_frame_type, node.dataset.avatarRarity || 'common'); };
   }
   async function ensureProfile(sessionUser) {
-    const { data, error } = await client.from('profiles').select('id,username,role,avatar_url,banner_url,followers_count').eq('id', sessionUser.id).maybeSingle();
+    const { data, error } = await client.from('profiles').select('id,username,role,avatar_url,avatar_frame_type,banner_url,followers_count').eq('id', sessionUser.id).maybeSingle();
     if (error) throw error;
     if (data) return data;
     const source = String(sessionUser.user_metadata?.username || sessionUser.email?.split('@')[0] || 'user').replace(/[^A-Za-z0-9_]/g, '').slice(0, 14);
     const username = userPattern.test(source) ? source : `user_${sessionUser.id.slice(0, 6)}`;
     const { error: insertError } = await client.from('profiles').insert({ id: sessionUser.id, username });
     if (insertError) throw insertError;
-    const { data: created, error: createdError } = await client.from('profiles').select('id,username,role,avatar_url,banner_url,followers_count').eq('id', sessionUser.id).single();
+    const { data: created, error: createdError } = await client.from('profiles').select('id,username,role,avatar_url,avatar_frame_type,banner_url,followers_count').eq('id', sessionUser.id).single();
     if (createdError) throw createdError;
     return created;
   }
@@ -128,7 +152,7 @@
     const all = [];
     let offset = 0;
     while (true) {
-      const { data, error } = await client.from('wallpapers').select('id,status,likes_count,downloads_count,views_count').eq('user_id', ownerId).order('created_at', { ascending: false }).range(offset, offset + 999);
+      const { data, error } = await client.from('wallpapers').select('id,status,likes_count,downloads_count,views_count,is_featured').eq('user_id', ownerId).order('created_at', { ascending: false }).range(offset, offset + 999);
       if (error) throw error;
       const page = data || [];
       all.push(...page);
@@ -141,7 +165,8 @@
       likes: summary.likes + (Number(wallpaper.likes_count) || 0),
       downloads: summary.downloads + (Number(wallpaper.downloads_count) || 0),
       views: summary.views + (Number(wallpaper.views_count) || 0),
-    }), { uploads: 0, likes: 0, downloads: 0, views: 0 });
+      featured: summary.featured + (wallpaper.is_featured ? 1 : 0),
+    }), { uploads: 0, likes: 0, downloads: 0, views: 0, featured: 0 });
   }
   function renderStats(totals) {
     const values = [['Uploads', totals.uploads], ['Likes', totals.likes], ['Downloads', totals.downloads], ['Views', totals.views]];
@@ -185,6 +210,13 @@
     document.getElementById('collection-sort-recent').classList.toggle('is-active', collectionSort === 'recent');
     document.getElementById('collection-sort-recent').setAttribute('aria-pressed', String(collectionSort === 'recent'));
     document.getElementById('collection-suggestive').checked = Boolean(user && showSuggestive);
+    for (const library of ['collection', 'favorites']) {
+      const button = document.getElementById(`profile-library-${library}`);
+      const active = profileLibrary === library;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-selected', String(active));
+    }
+    document.getElementById('profile-wallpapers-title').textContent = profileLibrary === 'favorites' ? 'Your favorites' : 'Your collection';
   }
   function suggestiveStorageKey(ownerId) { return `wallverse-show-suggestive:${ownerId}`; }
   function savedSuggestivePreference(ownerId) {
@@ -220,7 +252,8 @@
       card.addEventListener('click', (event) => { event.preventDefault(); inspect(); });
       observeCollectionCard(card); enableCardMotion(card); return card;
     }));
-    status.textContent = matchingCount ? `Showing ${cards.length} of ${matchingCount} cards` : 'No cards match these filters.';
+    const noun = profileLibrary === 'favorites' ? 'favorites' : 'cards';
+    status.textContent = matchingCount ? `Showing ${cards.length} of ${matchingCount} ${noun}` : `No ${noun} match these filters.`;
     status.hidden = false;
   }
   function applyCollectionView() {
@@ -228,7 +261,8 @@
     const rarity = document.getElementById('collection-rarity').value;
     const category = document.getElementById('collection-category').value;
     const quality = document.getElementById('collection-quality').value;
-    const filtered = collectionCards.filter((card) => {
+    const sourceCards = profileLibrary === 'favorites' ? favoriteCards : collectionCards;
+    const filtered = sourceCards.filter((card) => {
       const wallpaper = wallpaperFor(card);
       if (!wallpaper) return false;
       const title = String(wallpaper.title || '').toLocaleLowerCase();
@@ -249,7 +283,7 @@
     document.getElementById('profile-sign-out').hidden = !user;
     document.getElementById('profile-upload').hidden = !user;
     wallpapersSection.hidden = !user; signedOut.hidden = Boolean(user);
-    if (!user) { showSuggestive = false; updateCollectionControls(); hero.hidden = true; return; }
+    if (!user) { showSuggestive = false; collectionCards = []; favoriteCards = []; updateCollectionControls(); hero.hidden = true; return; }
     hero.hidden = false; hero.setAttribute('aria-busy', 'true');
     try {
       profile = await ensureProfile(user);
@@ -260,9 +294,13 @@
       if (profile.banner_url) { banner.src = profile.banner_url; banner.alt = ''; banner.hidden = false; banner.onerror = () => { banner.hidden = true; }; }
       showSuggestive = savedSuggestivePreference(user.id);
       updateCollectionControls();
-      collectionCards = await fetchVisibleCollection(user.id, showSuggestive);
+      [collectionCards, favoriteCards] = await Promise.all([fetchVisibleCollection(user.id, showSuggestive), fetchFavorites(user.id, showSuggestive)]);
       applyCollectionView();
-      try { renderStats(await fetchGlobalStats(user.id)); } catch (error) { console.warn('Profile statistics unavailable.', error); renderStats({ uploads: 0, likes: 0, downloads: 0, views: 0 }); }
+      try {
+        const totals = await fetchGlobalStats(user.id);
+        renderStats(totals);
+        window.WallverseCardFrames?.applyAvatar(document.getElementById('profile-avatar'), profile.avatar_frame_type, window.WallverseCardFrames.creatorRarity(profile, totals));
+      } catch (error) { console.warn('Profile statistics unavailable.', error); renderStats({ uploads: 0, likes: 0, downloads: 0, views: 0 }); }
       try {
         document.getElementById('profile-power').textContent = `${compact(await fetchCollectionPower(user.id))} pts`;
       } catch (error) {
@@ -273,6 +311,8 @@
     finally { hero.setAttribute('aria-busy', 'false'); }
   }
   document.getElementById('collection-search').addEventListener('input', applyCollectionView);
+  document.getElementById('profile-library-collection').addEventListener('click', () => { profileLibrary = 'collection'; updateCollectionControls(); applyCollectionView(); });
+  document.getElementById('profile-library-favorites').addEventListener('click', () => { profileLibrary = 'favorites'; updateCollectionControls(); applyCollectionView(); });
   document.getElementById('collection-rarity').addEventListener('change', applyCollectionView);
   document.getElementById('collection-category').addEventListener('change', applyCollectionView);
   document.getElementById('collection-quality').addEventListener('change', applyCollectionView);
@@ -283,22 +323,33 @@
     const requested = event.target.checked;
     const status = document.getElementById('profile-wallpapers-status');
     const previousCards = collectionCards;
+    const previousFavorites = favoriteCards;
     showSuggestive = requested;
-    if (!requested) { collectionCards = collectionCards.filter((card) => !wallpaperFor(card)?.is_suggestive); applyCollectionView(); }
+    if (!requested) { collectionCards = collectionCards.filter((card) => !wallpaperFor(card)?.is_suggestive); favoriteCards = favoriteCards.filter((card) => !wallpaperFor(card)?.is_suggestive); applyCollectionView(); }
     updateCollectionControls();
     status.textContent = 'Refreshing collection…'; status.hidden = false;
     event.target.disabled = true;
     try {
-      collectionCards = await fetchVisibleCollection(user.id, requested);
+      [collectionCards, favoriteCards] = await Promise.all([fetchVisibleCollection(user.id, requested), fetchFavorites(user.id, requested)]);
       saveSuggestivePreference(user.id, requested);
       applyCollectionView();
     } catch (error) {
       showSuggestive = !requested;
       collectionCards = previousCards;
+      favoriteCards = previousFavorites;
       updateCollectionControls();
       applyCollectionView();
       status.textContent = 'Unable to update this setting. Please try again.';
     } finally { event.target.disabled = false; }
+  });
+  window.addEventListener('wallverse:favorite-updated', async (event) => {
+    if (!user) return;
+    if (event.detail?.favorited === false) favoriteCards = favoriteCards.filter((card) => wallpaperFor(card)?.id !== event.detail.wallpaperId);
+    else {
+      try { favoriteCards = await fetchFavorites(user.id, showSuggestive); }
+      catch (error) { console.warn('Favorites could not be refreshed.', error); }
+    }
+    if (profileLibrary === 'favorites') applyCollectionView();
   });
   document.getElementById('profile-sign-out').addEventListener('click', () => client.auth.signOut());
   client.auth.onAuthStateChange((_event, session) => window.setTimeout(() => load(session?.user), 0));

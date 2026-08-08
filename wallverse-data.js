@@ -4,8 +4,8 @@ const WALLVERSE_PUBLIC_CONFIG = {
   r2PublicBaseUrl: 'https://images.wallverse.win',
 };
 
-const SELECT = 'id,user_id,title,description,image_url,thumbnail_url,category,quality,width,height,file_size,likes_count,downloads_count,views_count,is_ai,is_suggestive,is_weekly,is_featured,polished_until,created_at,storage_provider,thumbnail_storage_key,hd_storage_key,profiles!wallpapers_user_id_fkey(username,avatar_url),wallpaper_tags(tags(name))';
-const SPOTLIGHT_SELECT = 'id,title,image_url,thumbnail_url,category,quality,is_weekly,is_featured,storage_provider,thumbnail_storage_key,hd_storage_key,profiles!wallpapers_user_id_fkey(username,avatar_url),wallpaper_tags(tags(name))';
+const SELECT = 'id,user_id,title,description,image_url,thumbnail_url,category,quality,width,height,file_size,likes_count,downloads_count,views_count,is_ai,is_suggestive,is_weekly,is_featured,polished_until,created_at,storage_provider,thumbnail_storage_key,hd_storage_key,profiles!wallpapers_user_id_fkey(username,role,avatar_url,avatar_frame_type),wallpaper_tags(tags(name))';
+const SPOTLIGHT_SELECT = 'id,title,image_url,thumbnail_url,category,quality,is_weekly,is_featured,storage_provider,thumbnail_storage_key,hd_storage_key,profiles!wallpapers_user_id_fkey(username,role,avatar_url,avatar_frame_type),wallpaper_tags(tags(name))';
 const FEATURED_SELECT = SELECT;
 const CREATOR_STATS_SELECT = 'id,quality,likes_count,downloads_count,views_count,is_featured,is_weekly';
 const PAGE_SIZE = 12;
@@ -155,7 +155,7 @@ function fetchWallpapers(filters) {
   return fetchPublic('wallpapers', { select: SELECT, ...filters });
 }
 
-function creatorNode(profile) {
+function creatorNode(profile, rarity = 'common') {
   const username = profile?.username;
   if (!username) return null;
   const creator = document.createElement('div');
@@ -168,8 +168,9 @@ function creatorNode(profile) {
     image.className = 'avatar__image';
     image.src = profile.avatar_url;
     image.alt = '';
-    image.onload = () => { avatar.textContent = ''; avatar.append(image); };
+    image.onload = () => { avatar.replaceChildren(image); window.WallverseCardFrames?.applyAvatar(avatar, profile.avatar_frame_type, rarity); };
   }
+  window.WallverseCardFrames?.applyAvatar(avatar, profile.avatar_frame_type, rarity);
   const name = document.createElement('strong');
   name.textContent = `@${username}`;
   creator.append(avatar, name);
@@ -452,15 +453,21 @@ async function loadFeatured() {
     }
   }
   if (!unique.length) { document.getElementById('featured-grid').hidden = true; return; }
-  const indices = [0, 1 % unique.length];
+  const indices = [0, unique.length > 1 ? 1 : -1];
   const featuredCards = [...document.querySelectorAll('.featured-card')];
   const switching = [false, false];
-  await renderFeatured([unique[indices[0]], unique[indices[1]]]);
+  await renderFeatured([unique[indices[0]], indices[1] >= 0 ? unique[indices[1]] : null]);
   if (unique.length <= 2) return;
   const rotateCard = async (cardIndex) => {
     if (switching[cardIndex]) return;
     switching[cardIndex] = true;
-    indices[cardIndex] = (indices[cardIndex] + 2) % unique.length;
+    const otherIndex = indices[cardIndex === 0 ? 1 : 0];
+    let nextIndex = indices[cardIndex];
+    for (let step = 0; step < unique.length; step += 1) {
+      nextIndex = (nextIndex + 1) % unique.length;
+      if (nextIndex !== otherIndex) break;
+    }
+    indices[cardIndex] = nextIndex;
     await renderFeaturedCard(featuredCards[cardIndex], unique[indices[cardIndex]], { animate: true });
     switching[cardIndex] = false;
   };
@@ -507,7 +514,13 @@ function renderCreatorSpotlight(profile, bannerUrl, wallpapers) {
     banner.remove();
   }
   const creator = document.getElementById('creator-spotlight-profile');
-  const creatorContent = creatorNode(profile);
+  const totals = wallpapers.reduce((summary, wallpaper) => ({
+    uploads: summary.uploads + 1,
+    likes: summary.likes + (Number(wallpaper.likes_count) || 0),
+    downloads: summary.downloads + (Number(wallpaper.downloads_count) || 0),
+    featured: summary.featured + (wallpaper.is_featured ? 1 : 0),
+  }), { uploads: 0, likes: 0, downloads: 0, featured: 0 });
+  const creatorContent = creatorNode(profile, window.WallverseCardFrames?.creatorRarity(profile, totals) || 'common');
   creator.replaceChildren(...creatorContent.childNodes);
   card.tabIndex = 0;
   card.setAttribute('role', 'button');
@@ -569,7 +582,7 @@ async function toggleCreatorFollow() {
 
 async function loadCreatorSpotlight() {
   const profiles = await fetchPublic('profiles', {
-    select: 'id,username,role,avatar_url',
+    select: 'id,username,role,avatar_url,avatar_frame_type,followers_count',
     is_spotlighted: 'eq.true',
     limit: '1',
   });

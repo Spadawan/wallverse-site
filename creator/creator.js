@@ -10,7 +10,7 @@
     client.auth.getUser().then(({ data }) => renderUploadTrigger(data.user)).catch(() => renderUploadTrigger(null));
     client.auth.onAuthStateChange((_event, session) => renderUploadTrigger(session?.user));
     const creatorId = new URLSearchParams(window.location.search).get('id');
-    const fields = 'id,user_id,title,description,image_url,thumbnail_url,category,quality,width,height,file_size,likes_count,downloads_count,views_count,is_suggestive,is_weekly,is_featured,polished_until,created_at,storage_provider,thumbnail_storage_key,hd_storage_key,profiles!wallpapers_user_id_fkey(username,avatar_url),wallpaper_tags(tags(name))';
+    const fields = 'id,user_id,title,description,image_url,thumbnail_url,category,quality,width,height,file_size,likes_count,downloads_count,views_count,is_suggestive,is_weekly,is_featured,polished_until,created_at,storage_provider,thumbnail_storage_key,hd_storage_key,profiles!wallpapers_user_id_fkey(username,role,avatar_url,avatar_frame_type),wallpaper_tags(tags(name))';
     const tierRank = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4, mythic: 5 };
     const grid = document.getElementById('creator-grid');
     const status = document.getElementById('creator-status');
@@ -37,11 +37,12 @@
         offset += 1000;
       }
     };
-    const addAvatar = (target, profile) => {
+    const addAvatar = (target, profile, rarity = 'common') => {
       target.textContent = (profile?.username || 'W').charAt(0).toUpperCase();
+      window.WallverseCardFrames?.applyAvatar(target, profile?.avatar_frame_type, rarity);
       if (!profile?.avatar_url) return;
       const image = new Image(); image.className = 'avatar__image'; image.alt = ''; image.src = profile.avatar_url;
-      image.onload = () => target.replaceChildren(image);
+      image.onload = () => { target.replaceChildren(image); window.WallverseCardFrames?.applyAvatar(target, profile?.avatar_frame_type, rarity); };
     };
     const cardStat = (icon, label, value) => {
       const node = document.createElement('span'); node.className = `collectible-card__stat collectible-card__stat--${label.toLowerCase()}`;
@@ -107,19 +108,20 @@
       setSortControls();
     };
     const renderStats = (wallpapers, ownedCount) => {
-      const totals = wallpapers.reduce((sum, wallpaper) => ({ likes: sum.likes + (Number(wallpaper.likes_count) || 0), downloads: sum.downloads + (Number(wallpaper.downloads_count) || 0), views: sum.views + (Number(wallpaper.views_count) || 0) }), { likes: 0, downloads: 0, views: 0 });
+      const totals = wallpapers.reduce((sum, wallpaper) => ({ likes: sum.likes + (Number(wallpaper.likes_count) || 0), downloads: sum.downloads + (Number(wallpaper.downloads_count) || 0), views: sum.views + (Number(wallpaper.views_count) || 0), featured: sum.featured + (wallpaper.is_featured ? 1 : 0) }), { likes: 0, downloads: 0, views: 0, featured: 0 });
       const values = [['Uploads', wallpapers.length], ['Likes', totals.likes], ['Downloads', totals.downloads], ['Views', totals.views]];
       document.getElementById('creator-stats').replaceChildren(...values.map(([label, value]) => { const item = document.createElement('article'); item.innerHTML = `<span>${label}</span><strong>${compact(value)}</strong>`; return item; }));
       const powerSource = ownedCount ? cards.map(wallpaperFor) : wallpapers;
       const power = powerSource.reduce((sum, wallpaper) => sum + cardScore(wallpaper), 0);
       document.getElementById('creator-power').textContent = `${compact(power)} pts`;
+      return { ...totals, uploads: wallpapers.length };
     };
     const fail = (message) => { document.getElementById('creator-role').textContent = message; document.getElementById('creator-hero').setAttribute('aria-busy', 'false'); status.textContent = message; };
     const load = async () => {
       if (!creatorId) { fail('This creator profile is unavailable.'); return; }
       try {
         const [{ data: profile, error: profileError }, uploaded, owned] = await Promise.all([
-          client.from('profiles').select('id,username,role,avatar_url,banner_url').eq('id', creatorId).maybeSingle(),
+          client.from('profiles').select('id,username,role,avatar_url,avatar_frame_type,banner_url,followers_count').eq('id', creatorId).maybeSingle(),
           allPages((offset) => client.from('wallpapers').select(fields).eq('user_id', creatorId).eq('status', 'approved').eq('is_suggestive', false).order('created_at', { ascending: false }).range(offset, offset + 999)),
           allPages((offset) => client.from('user_cards').select(`id,acquired_at,card_frame_id,card_frame_type,wallpapers!inner(${fields})`).eq('owner_id', creatorId).eq('wallpapers.status', 'approved').eq('wallpapers.is_suggestive', false).order('acquired_at', { ascending: false }).range(offset, offset + 999)).catch(() => []),
         ]);
@@ -128,14 +130,15 @@
         document.title = `@${profile.username || 'Creator'} · Wallverse`;
         document.getElementById('creator-name').textContent = `@${profile.username || 'creator'}`;
         document.getElementById('creator-role').textContent = profile.role || 'Wallverse creator';
-        addAvatar(document.getElementById('creator-avatar'), profile);
         const banner = document.getElementById('creator-banner');
         if (profile.banner_url) {
           banner.src = profile.banner_url; banner.hidden = false;
           banner.onerror = () => { banner.hidden = true; };
         }
         cards = owned.length ? owned : uploaded;
-        renderStats(uploaded, owned.length); render();
+        const creatorTotals = renderStats(uploaded, owned.length);
+        addAvatar(document.getElementById('creator-avatar'), profile, window.WallverseCardFrames?.creatorRarity(profile, creatorTotals) || 'common');
+        render();
       } catch (error) { console.warn('Creator profile unavailable.', error); fail('Creator details are unavailable right now.'); }
       finally { document.getElementById('creator-hero').setAttribute('aria-busy', 'false'); }
     };
