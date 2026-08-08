@@ -9,6 +9,10 @@ const SELECT = `id,user_id,title,description,image_url,thumbnail_url,category,qu
 const SPOTLIGHT_SELECT = `id,title,image_url,thumbnail_url,category,quality,is_weekly,is_featured,storage_provider,thumbnail_storage_key,hd_storage_key,profiles!wallpapers_user_id_fkey(username,avatar_url,avatar_frame_type),wallpaper_tags(tags(name)),${CARD_RELATION}`;
 const FEATURED_SELECT = SELECT;
 const CREATOR_STATS_SELECT = 'id,quality,likes_count,downloads_count,views_count,is_featured,is_weekly';
+// This public, read-only view deliberately exposes no owner, inventory, or
+// assignment metadata. It is the web counterpart of Android's public frame
+// hydration for approved collectible cards.
+const PUBLIC_CARD_FRAMES_VIEW = 'public_wallpaper_card_frames';
 const PAGE_SIZE = 12;
 const MAX_RENDERED_CARDS = PAGE_SIZE * 3;
 const FEED_CATALOG_PAGE_SIZE = 1000;
@@ -51,6 +55,8 @@ let feedAlgorithmProfile = null;
 let feedAlgorithmLoading = null;
 let shopFramesUserId = null;
 const shopFramesByCardId = new Map();
+const publicFramesByWallpaperId = new Map();
+let publicFramesHydrated = false;
 const publicRequests = new Map();
 
 function registerIdleCard(card) {
@@ -204,9 +210,12 @@ function assignedShopFrameFor(record) {
 function frameForCardRecord(record, wallpaper) {
   // Match Android's FramePackInventory: a valid shop assignment owned by the
   // signed-in user takes precedence over a frame persisted directly on card.
+  // For everyone else, use the safe public frame projection instead of the
+  // private user_cards / frame_assignments relations.
   return window.WallverseCardFrames?.normalize(
     assignedShopFrameFor(record),
     record,
+    publicFramesByWallpaperId.get(String(wallpaper?.id || '')),
     wallpaper?.web_card_frame_type,
     wallpaper?.card_frame_type,
     wallpaper?.card_frame_id,
@@ -513,6 +522,37 @@ function renderFeedSuggestiveControl() {
 async function reloadFeed() {
   loadedWallpapers = []; resetFeedWindow(); grid.replaceChildren(); grid.setAttribute('aria-busy', 'true');
   status.textContent = 'Loading wallpapers…'; status.hidden = false; await loadPage();
+}
+
+async function hydratePublicCardFrames() {
+  if (publicFramesHydrated) return;
+  publicFramesByWallpaperId.clear();
+  let offset = 0;
+  try {
+    while (true) {
+      const rows = await fetchPublic(PUBLIC_CARD_FRAMES_VIEW, {
+        select: 'wallpaper_id,card_id,frame_type',
+        order: 'wallpaper_id.asc,card_id.asc',
+        limit: String(FEED_CATALOG_PAGE_SIZE),
+        offset: String(offset),
+      });
+      for (const row of rows) {
+        const wallpaperId = String(row?.wallpaper_id || '');
+        const frame = window.WallverseCardFrames?.normalize(row?.frame_type) || 'default';
+        // A wallpaper can have more than one collectible card. Keep the
+        // first stable public assignment so every visitor sees one consistent
+        // public frame without learning who owns any card.
+        if (wallpaperId && frame !== 'default' && !publicFramesByWallpaperId.has(wallpaperId)) publicFramesByWallpaperId.set(wallpaperId, frame);
+      }
+      if (rows.length < FEED_CATALOG_PAGE_SIZE) break;
+      offset += rows.length;
+    }
+    publicFramesHydrated = true;
+  } catch (error) {
+    // The feed must remain available while an older deployment or a temporary
+    // Data API issue makes the new public projection unavailable.
+    console.warn('Public card frame projection unavailable.', error);
+  }
 }
 
 async function hydrateShopFrameAssignments(user) {
@@ -838,6 +878,7 @@ async function loadInitialCatalog() {
 async function initialize() {
   try {
     await initializeFeedAuth();
+    await hydratePublicCardFrames();
     // Render the safe public cache immediately whenever it is available. A
     // signed-in refresh still follows in the background to hydrate the
     // viewer's own user_cards and their selected custom frames.
