@@ -493,3 +493,19 @@ img { -webkit-user-drag:none; user-select:none; }
 @keyframes electric-arc { 0%,18%,100% { opacity:.12; transform:rotate(var(--arc-rotate)) scaleX(.3) skewX(-30deg); } 27% { opacity:1; transform:rotate(var(--arc-rotate)) scaleX(1.45) skewX(22deg); } 39% { opacity:.28; transform:rotate(var(--arc-rotate)) scaleX(.62) skewX(-12deg); } 48% { opacity:.9; transform:rotate(var(--arc-rotate)) scaleX(1.08) skewX(12deg); } 59% { opacity:.16; transform:rotate(var(--arc-rotate)) scaleX(.42) skewX(-20deg); } }
 @media (max-width:760px) { .collectible-card:has(>.card-frame-skin) { padding:8px; }.frame--neonrounded>.card-frame-skin,.frame--neongradient>.card-frame-skin { border-radius:29px; }.frame--neonrounded>.collectible-card__media,.frame--neongradient>.collectible-card__media { border-radius:19px; } }
 @media (prefers-reduced-motion:reduce) { .frame--neonrounded>.card-frame-skin,.frame--neonrounded>.card-frame-skin::before,.frame--neonrounded>.card-frame-skin__spark,.frame--neongradient>.card-frame-skin::before,.frame--cyberpunk>.card-frame-skin__rail,.frame--cyberpunk>.card-frame-skin__spark,.frame--electric>.card-frame-skin,.frame--electric>.card-frame-skin::before,.frame--electric>.card-frame-skin__rail,.frame--electric>.card-frame-skin__spark { animation:none !important; } }
+
+/* Upload progress mirrors the Android upload phases while showing browser transfer progress. */
+.upload-progress { display:grid; gap:10px; padding:15px 16px; border:1px solid rgba(40,243,255,.28); border-radius:16px; background:linear-gradient(118deg,rgba(18,82,113,.2),rgba(76,50,142,.16)); box-shadow:inset 0 1px rgba(255,255,255,.035),0 0 24px rgba(40,243,255,.06); }
+.upload-progress__head { display:flex; align-items:center; justify-content:space-between; gap:16px; font-size:.82rem; }
+.upload-progress__head strong { color:#eaf9ff; font-weight:800; }
+.upload-progress__head span { color:var(--cyan); font-variant-numeric:tabular-nums; font-weight:800; }
+.upload-progress__track { height:9px; overflow:hidden; border:1px solid rgba(185,238,255,.13); border-radius:999px; background:rgba(3,9,20,.72); box-shadow:inset 0 1px 5px rgba(0,0,0,.38); }
+.upload-progress__track span { display:block; width:100%; height:100%; border-radius:inherit; transform:scaleX(0); transform-origin:left center; background:linear-gradient(90deg,#b64cff 0%,#6d70ff 34%,#29dcff 72%,#b9fbff 100%); box-shadow:0 0 12px rgba(40,243,255,.75); transition:transform .3s cubic-bezier(.2,.8,.2,1),filter .25s ease; }
+.upload-progress p { margin:0; color:#a8bdd1; font-size:.74rem; line-height:1.45; }
+.upload-progress.is-complete { border-color:rgba(87,255,193,.46); background:linear-gradient(118deg,rgba(20,116,102,.22),rgba(29,95,148,.17)); }
+.upload-progress.is-complete .upload-progress__head span { color:#84ffd4; }
+.upload-progress.is-complete .upload-progress__track span { background:linear-gradient(90deg,#35e4ae,#80ffe0); box-shadow:0 0 12px rgba(77,255,193,.65); }
+.upload-progress.is-error { border-color:rgba(255,116,156,.48); background:linear-gradient(118deg,rgba(133,43,91,.2),rgba(96,31,68,.16)); }
+.upload-progress.is-error .upload-progress__head span { color:#ff9dbb; }
+.upload-progress.is-error .upload-progress__track span { filter:saturate(.45); }
+@media (prefers-reduced-motion:reduce) { .upload-progress__track span { transition:none; } }

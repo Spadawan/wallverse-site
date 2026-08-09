@@ -83,6 +83,11 @@
       <section class="upload-picker" id="upload-picker"><input id="upload-file" type="file" accept="image/jpeg,image/png,image/webp" hidden><button id="upload-choose" type="button"><span class="material-symbols-rounded" aria-hidden="true">add_photo_alternate</span><strong>Choose an image</strong><small>JPG, PNG or WebP · 4 MB after crop</small></button></section>
       <section class="upload-crop" id="upload-crop" hidden><div class="upload-crop__stage" id="upload-crop-stage"><img id="upload-crop-image" alt="Selected wallpaper crop preview"><div class="upload-crop__grid" aria-hidden="true"></div></div><div class="upload-crop__controls"><button type="button" id="upload-zoom-out" aria-label="Zoom out">−</button><input id="upload-zoom" type="range" min="1" max="3" step="0.01" value="1" aria-label="Crop zoom"><button type="button" id="upload-zoom-in" aria-label="Zoom in">+</button></div><p>Drag to position your 9:20 crop. Minimum: 585 × 1300.</p></section>
       <p class="upload-status" id="upload-status" role="status" aria-live="polite"></p>
+      <section class="upload-progress" id="upload-progress" hidden aria-live="polite">
+        <div class="upload-progress__head"><strong id="upload-progress-title">Preparing your wallpaper</strong><span id="upload-progress-value">0%</span></div>
+        <div class="upload-progress__track" id="upload-progress-track" role="progressbar" aria-label="Wallpaper upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="upload-progress-bar"></span></div>
+        <p id="upload-progress-detail">Your artwork is being prepared securely.</p>
+      </section>
       <div class="upload-fields" id="upload-fields" hidden>
         <div class="upload-ai"><span class="material-symbols-rounded" aria-hidden="true">auto_awesome</span><div><strong id="upload-ai-title">Generating metadata…</strong><small id="upload-ai-copy">Wallverse AI is suggesting a title, category and tags.</small></div><button type="button" id="upload-ai-retry" hidden>Retry</button></div>
         <label>Title<input id="upload-wallpaper-title" maxlength="80" required></label><label>Description<textarea id="upload-description" maxlength="800" rows="3" placeholder="Optional"></textarea></label>
@@ -224,7 +229,7 @@
   <script src="/notifications-badge.js?v=2" defer></script>
   <script src="/wallpaper-inspection-runtime-0814a.js?v=inspection-encoding-1" defer></script>
   <script src="/wallpaper-routing.js?v=short-links-1" defer></script>
-  <script src="/wallpaper-upload.js?v=webp-parity-1" defer></script>
+  <script src="/wallpaper-upload.js?v=upload-progress-1" defer></script>
   <script src="/creator-modal.js?v=creator-page-route-1" defer></script>
   <script src="/custom-cursor-v4.js" defer></script>
   <script src="/experience-letter-motion-v6.js" defer></script>
