@@ -401,15 +401,18 @@ function createAdsterraFrame(options, source, { native = false } = {}) {
 }
 
 function mountAdsterraBanner(host, onError = () => {}, placement = 'grid') {
-  if (!host?.isConnected) return Promise.resolve();
-  const isDownload = placement === 'download';
-  const options = isDownload ? ADSTERRA_DOWNLOAD_BANNER_OPTIONS : ADSTERRA_GRID_BANNER_OPTIONS;
-  const source = isDownload ? ADSTERRA_DOWNLOAD_BANNER_URL : ADSTERRA_GRID_BANNER_URL;
-  makeAdsterraBannerResponsive(host, options);
-  const frame = createAdsterraFrame(options, source);
-  frame.addEventListener('error', onError, { once: true });
-  host.replaceChildren(frame);
-  return Promise.resolve();
+  if (!host) return Promise.resolve();
+  return new Promise((resolve) => requestAnimationFrame(() => {
+    if (!host.isConnected) { resolve(); return; }
+    const isDownload = placement === 'download';
+    const options = isDownload ? ADSTERRA_DOWNLOAD_BANNER_OPTIONS : ADSTERRA_GRID_BANNER_OPTIONS;
+    const source = isDownload ? ADSTERRA_DOWNLOAD_BANNER_URL : ADSTERRA_GRID_BANNER_URL;
+    makeAdsterraBannerResponsive(host, options);
+    const frame = createAdsterraFrame(options, source);
+    frame.addEventListener('error', onError, { once: true });
+    host.replaceChildren(frame);
+    resolve();
+  }));
 }
 
 function loadAdsterraBanner(host, card) {
