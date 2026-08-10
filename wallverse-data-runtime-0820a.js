@@ -17,7 +17,8 @@ const PUBLIC_CARD_FRAMES_VIEW = 'public_wallpaper_card_frames';
 const PAGE_SIZE = 12;
 const MAX_RENDERED_CARDS = PAGE_SIZE * 3;
 const FEED_CATALOG_PAGE_SIZE = 1000;
-const AD_CARD_INTERVAL = 12;
+const FIRST_AD_CARD_POSITION = 12;
+const FOLLOWING_AD_CARD_INTERVAL = 15;
 const ADSTERRA_GRID_BANNER_URL = 'https://www.highperformanceformat.com/9b67f852da5d9a4dc099ed07a1153c7d/invoke.js';
 const ADSTERRA_DOWNLOAD_BANNER_URL = 'https://www.highperformanceformat.com/fe410c0ec832e31de5aec22aa9ee26d1/invoke.js';
 const ADSTERRA_NATIVE_URL = 'https://pl30782857.effectivecpmnetwork.com/522b24f46ec68fe89a546004b33ecee5/invoke.js';
@@ -36,7 +37,6 @@ const ADSTERRA_DOWNLOAD_BANNER_OPTIONS = Object.freeze({
   width: 300,
   params: {},
 });
-let adsterraBannerQueue = Promise.resolve();
 let nativePlacementHost = null;
 const PUBLIC_CATALOG_CACHE_TTL = 10 * 60 * 1000;
 const PUBLIC_CATALOG_CACHE_MAX_AGE = 24 * 60 * 60 * 1000;
@@ -345,6 +345,11 @@ function collapseAdCard(card) {
   card.remove();
 }
 
+function shouldInsertAdAfter(position) {
+  const cardPosition = Number(position) || 0;
+  return cardPosition === FIRST_AD_CARD_POSITION || (cardPosition > FIRST_AD_CARD_POSITION && (cardPosition - FIRST_AD_CARD_POSITION) % FOLLOWING_AD_CARD_INTERVAL === 0);
+}
+
 function makeAdsterraBannerResponsive(host, options) {
   if (!host || host.dataset.responsiveBanner === 'true') return;
   host.dataset.responsiveBanner = 'true';
@@ -368,29 +373,46 @@ function makeAdsterraBannerResponsive(host, options) {
   sync();
 }
 
+function escapeInlineScript(value) {
+  return JSON.stringify(value).replace(/</g, '\\u003c');
+}
+
+function createAdsterraFrame(options, source, { native = false } = {}) {
+  const frame = document.createElement('iframe');
+  frame.className = native ? 'ad-provider-frame ad-provider-frame--native' : 'ad-provider-frame';
+  frame.title = 'Advertisement';
+  frame.loading = 'lazy';
+  frame.setAttribute('sandbox', 'allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox');
+  frame.referrerPolicy = 'strict-origin-when-cross-origin';
+  if (!native) {
+    frame.width = options.width;
+    frame.height = options.height;
+  } else {
+    frame.style.width = '100%';
+    frame.style.height = '220px';
+    frame.style.border = '0';
+  }
+  const documentStyle = native
+    ? 'html,body{margin:0;width:100%;min-height:100%;overflow:hidden;background:transparent}'
+    : `html,body{margin:0;width:${options.width}px;height:${options.height}px;overflow:hidden;background:transparent}`;
+  const placement = native ? `<div id="${ADSTERRA_NATIVE_CONTAINER_ID}"></div><script async="async" data-cfasync="false" src="${source}"></script>` : `<script>var atOptions=${escapeInlineScript(options)};</script><script src="${source}"></script>`;
+  frame.srcdoc = `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>${documentStyle}</style></head><body>${placement}</body></html>`;
+  return frame;
+}
+
 function mountAdsterraBanner(host, onError = () => {}, placement = 'grid') {
-  // Adsterra's banner script reads a global `atOptions`. Queue mounts so two
-  // grid cards can never overwrite one another's placement configuration.
-  const request = adsterraBannerQueue.then(() => new Promise((resolve) => {
+  if (!host) return Promise.resolve();
+  return new Promise((resolve) => requestAnimationFrame(() => {
     if (!host.isConnected) { resolve(); return; }
     const isDownload = placement === 'download';
     const options = isDownload ? ADSTERRA_DOWNLOAD_BANNER_OPTIONS : ADSTERRA_GRID_BANNER_OPTIONS;
     const source = isDownload ? ADSTERRA_DOWNLOAD_BANNER_URL : ADSTERRA_GRID_BANNER_URL;
-    window.atOptions = { ...options, params: {} };
     makeAdsterraBannerResponsive(host, options);
-    const script = document.createElement('script');
-    script.src = source;
-    script.async = false;
-    script.referrerPolicy = 'strict-origin-when-cross-origin';
-    script.addEventListener('load', () => resolve(), { once: true });
-    script.addEventListener('error', () => {
-      onError();
-      resolve();
-    }, { once: true });
-    host.append(script);
+    const frame = createAdsterraFrame(options, source);
+    frame.addEventListener('error', onError, { once: true });
+    host.replaceChildren(frame);
+    resolve();
   }));
-  adsterraBannerQueue = request.catch(() => {});
-  return request;
 }
 
 function loadAdsterraBanner(host, card) {
@@ -405,21 +427,12 @@ function loadAdsterraNative(host, card) {
     return;
   }
   nativePlacementHost = host;
-  const container = document.createElement('div');
-  container.id = ADSTERRA_NATIVE_CONTAINER_ID;
-  container.className = 'ad-card__native-slot';
-  host.append(container);
-
-  const script = document.createElement('script');
-  script.async = true;
-  script.dataset.cfasync = 'false';
-  script.src = ADSTERRA_NATIVE_URL;
-  script.referrerPolicy = 'strict-origin-when-cross-origin';
-  script.addEventListener('error', () => {
+  const frame = createAdsterraFrame({}, ADSTERRA_NATIVE_URL, { native: true });
+  frame.addEventListener('error', () => {
     if (nativePlacementHost === host) nativePlacementHost = null;
     collapseAdCard(card);
   }, { once: true });
-  host.append(script);
+  host.replaceChildren(frame);
 }
 
 function renderAdCard(variant = 'grid') {
@@ -569,7 +582,7 @@ function renderFeed() {
   const feedItems = [];
   visible.forEach((wallpaper, index) => {
     feedItems.push(renderCard(wallpaper));
-    if ((index + 1) % AD_CARD_INTERVAL === 0) feedItems.push(renderAdCard());
+    if (shouldInsertAdAfter(feedWindowStart + index + 1)) feedItems.push(renderAdCard());
   });
   grid.replaceChildren(...feedItems);
   const algorithmNote = feedSort === 'algorithm' && feedAlgorithmProfile?.signalCount < 2 ? ' Save, like or download wallpapers to personalize this feed.' : '';
@@ -1066,5 +1079,5 @@ if (isHomepageFeed) {
 
 window.WallverseAvatarCrop = { apply: applyAvatarCrop };
 window.WallverseAds = { mountBanner: mountAdsterraBanner };
-window.WallverseCards = { thumbnailUrl, downloadUrl, wallpaperPath, tagsFor, qualityLabel, compactNumber, publicCardScore, publicCardTier, cardFrameFor, frameForCardRecord, enablePublicCardMotion, createAdCard: renderAdCard, adCardInterval: AD_CARD_INTERVAL };
+window.WallverseCards = { thumbnailUrl, downloadUrl, wallpaperPath, tagsFor, qualityLabel, compactNumber, publicCardScore, publicCardTier, cardFrameFor, frameForCardRecord, enablePublicCardMotion, createAdCard: renderAdCard, shouldInsertAdAfter };
 window.dispatchEvent(new Event('wallverse:data-ready'));
