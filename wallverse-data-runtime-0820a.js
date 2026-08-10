@@ -14,12 +14,13 @@ const CREATOR_STATS_SELECT = 'id,quality,likes_count,downloads_count,views_count
 // assignment metadata. It is the web counterpart of Android's public frame
 // hydration for approved collectible cards.
 const PUBLIC_CARD_FRAMES_VIEW = 'public_wallpaper_card_frames';
+// PAGE_SIZE is the number of visible grid slots, including sponsored cards.
 const PAGE_SIZE = 12;
 const MAX_RENDERED_CARDS = PAGE_SIZE * 3;
 const FEED_CATALOG_PAGE_SIZE = 1000;
 // The sponsored placement occupies the twelfth visual feed slot: eleven
 // wallpapers, then the ad. Subsequent placements follow every 15 wallpapers.
-const FIRST_AD_CARD_POSITION = 11;
+const FIRST_AD_CARD_POSITION = PAGE_SIZE - 1;
 const FOLLOWING_AD_CARD_INTERVAL = 15;
 const ADSTERRA_GRID_BANNER_URL = 'https://www.highperformanceformat.com/9b67f852da5d9a4dc099ed07a1153c7d/invoke.js';
 const ADSTERRA_DOWNLOAD_BANNER_URL = 'https://www.highperformanceformat.com/fe410c0ec832e31de5aec22aa9ee26d1/invoke.js';
@@ -63,7 +64,7 @@ let cardIndex = 0;
 let idleObserver;
 let loadedWallpapers = [];
 let feedSort = 'popular';
-let visibleFeedCount = PAGE_SIZE;
+let visibleFeedCount = FIRST_AD_CARD_POSITION;
 let feedWindowStart = 0;
 let feedRequestRevision = 0;
 let feedShowSuggestive = false;
@@ -375,16 +376,11 @@ function makeAdsterraBannerResponsive(host, options) {
   sync();
 }
 
-function escapeInlineScript(value) {
-  return JSON.stringify(value).replace(/</g, '\\u003c');
-}
-
-function createAdsterraFrame(options, source, { native = false } = {}) {
+function createAdsterraFrame(options, { native = false, placement = 'grid' } = {}) {
   const frame = document.createElement('iframe');
   frame.className = native ? 'ad-provider-frame ad-provider-frame--native' : 'ad-provider-frame';
   frame.title = 'Advertisement';
   frame.loading = 'lazy';
-  frame.setAttribute('sandbox', 'allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox');
   frame.referrerPolicy = 'strict-origin-when-cross-origin';
   if (!native) {
     frame.width = options.width;
@@ -394,11 +390,13 @@ function createAdsterraFrame(options, source, { native = false } = {}) {
     frame.style.height = '220px';
     frame.style.border = '0';
   }
-  const documentStyle = native
-    ? 'html,body{margin:0;width:100%;min-height:100%;overflow:hidden;background:transparent}'
-    : `html,body{margin:0;width:${options.width}px;height:${options.height}px;overflow:hidden;background:transparent}`;
-  const placement = native ? `<div id="${ADSTERRA_NATIVE_CONTAINER_ID}"></div><script async="async" data-cfasync="false" src="${source}"></script>` : `<script>var atOptions=${escapeInlineScript(options)};</script><script src="${source}"></script>`;
-  frame.srcdoc = `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>${documentStyle}</style></head><body>${placement}</body></html>`;
+  // Provider code runs in a separate document, never in the Wallverse page.
+  // A regular iframe document keeps the provider's requested origin/context,
+  // unlike srcdoc+sandbox which causes the ad response to be rejected.
+  const page = native
+    ? '/ads/adsterra-native.html'
+    : placement === 'download' ? '/ads/adsterra-download.html' : '/ads/adsterra-vertical.html';
+  frame.src = `${page}?v=1`;
   return frame;
 }
 
@@ -408,9 +406,8 @@ function mountAdsterraBanner(host, onError = () => {}, placement = 'grid') {
     if (!host.isConnected) { resolve(); return; }
     const isDownload = placement === 'download';
     const options = isDownload ? ADSTERRA_DOWNLOAD_BANNER_OPTIONS : ADSTERRA_GRID_BANNER_OPTIONS;
-    const source = isDownload ? ADSTERRA_DOWNLOAD_BANNER_URL : ADSTERRA_GRID_BANNER_URL;
     makeAdsterraBannerResponsive(host, options);
-    const frame = createAdsterraFrame(options, source);
+    const frame = createAdsterraFrame(options, { placement });
     frame.addEventListener('error', onError, { once: true });
     host.replaceChildren(frame);
     resolve();
@@ -429,7 +426,7 @@ function loadAdsterraNative(host, card) {
     return;
   }
   nativePlacementHost = host;
-  const frame = createAdsterraFrame({}, ADSTERRA_NATIVE_URL, { native: true });
+  const frame = createAdsterraFrame({}, { native: true });
   frame.addEventListener('error', () => {
     if (nativePlacementHost === host) nativePlacementHost = null;
     collapseAdCard(card);
@@ -560,7 +557,26 @@ function algorithmSortedFeed(wallpapers) {
 }
 function resetFeedWindow() {
   feedWindowStart = 0;
-  visibleFeedCount = PAGE_SIZE;
+  visibleFeedCount = FIRST_AD_CARD_POSITION;
+}
+
+function feedSlotCount(wallpaperStart, wallpaperCount) {
+  let slots = wallpaperCount;
+  for (let offset = 1; offset <= wallpaperCount; offset += 1) {
+    if (shouldInsertAdAfter(wallpaperStart + offset)) slots += 1;
+  }
+  return slots;
+}
+
+function growFeedWindow(slotBudget = PAGE_SIZE) {
+  let addedSlots = 0;
+  while (addedSlots < slotBudget) {
+    const nextWallpaperPosition = feedWindowStart + visibleFeedCount + 1;
+    const nextSlots = 1 + (shouldInsertAdAfter(nextWallpaperPosition) ? 1 : 0);
+    if (addedSlots + nextSlots > slotBudget && addedSlots > 0) break;
+    visibleFeedCount += 1;
+    addedSlots += nextSlots;
+  }
 }
 
 function renderFeed() {
@@ -596,7 +612,7 @@ function renderFeed() {
   previous.hidden = feedWindowStart === 0;
   previous.disabled = feedWindowStart === 0;
   loadMore.hidden = visibleEnd >= filtered.length;
-  loadMore.textContent = visibleFeedCount < MAX_RENDERED_CARDS ? 'Load more' : 'Show next';
+  loadMore.textContent = feedSlotCount(feedWindowStart, visibleFeedCount) < MAX_RENDERED_CARDS ? 'Load more' : 'Show next';
 }
 
 function feedSuggestiveKey(userId) { return `wallverse-show-suggestive:${userId}`; }
@@ -1032,7 +1048,7 @@ async function initialize() {
 if (isHomepageFeed) {
   const loadPrevious = document.getElementById('load-previous');
   loadMore.addEventListener('click', () => {
-    if (visibleFeedCount < MAX_RENDERED_CARDS) visibleFeedCount = Math.min(MAX_RENDERED_CARDS, visibleFeedCount + PAGE_SIZE);
+    if (feedSlotCount(feedWindowStart, visibleFeedCount) < MAX_RENDERED_CARDS) growFeedWindow(PAGE_SIZE);
     else feedWindowStart += PAGE_SIZE;
     renderFeed();
   });
