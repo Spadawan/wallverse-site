@@ -404,10 +404,13 @@ function mountAdsterraBanner(host, onError = () => {}, placement = 'grid') {
   if (!host) return Promise.resolve();
   return new Promise((resolve) => requestAnimationFrame(() => {
     if (!host.isConnected) { resolve(); return; }
-    const isDownload = placement === 'download';
+    // The download panel is created by the inspection runtime. Detect its
+    // host too, so an older cached caller can never accidentally request the
+    // vertical card placement.
+    const isDownload = placement === 'download' || host.classList.contains('download-ad-dialog__placement');
     const options = isDownload ? ADSTERRA_DOWNLOAD_BANNER_OPTIONS : ADSTERRA_GRID_BANNER_OPTIONS;
     makeAdsterraBannerResponsive(host, options);
-    const frame = createAdsterraFrame(options, { placement });
+    const frame = createAdsterraFrame(options, { placement: isDownload ? 'download' : 'grid' });
     frame.addEventListener('error', onError, { once: true });
     host.replaceChildren(frame);
     resolve();
