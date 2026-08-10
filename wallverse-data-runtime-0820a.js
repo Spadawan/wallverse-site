@@ -65,7 +65,9 @@ let idleObserver;
 let loadedWallpapers = [];
 let feedSort = 'popular';
 let visibleFeedCount = FIRST_AD_CARD_POSITION;
+let visibleFeedSlotBudget = PAGE_SIZE;
 let feedWindowStart = 0;
+const feedWindowHistory = [];
 let feedRequestRevision = 0;
 let feedShowSuggestive = false;
 let feedUser = null;
@@ -561,6 +563,8 @@ function algorithmSortedFeed(wallpapers) {
 function resetFeedWindow() {
   feedWindowStart = 0;
   visibleFeedCount = FIRST_AD_CARD_POSITION;
+  visibleFeedSlotBudget = PAGE_SIZE;
+  feedWindowHistory.length = 0;
 }
 
 function feedSlotCount(wallpaperStart, wallpaperCount) {
@@ -571,15 +575,17 @@ function feedSlotCount(wallpaperStart, wallpaperCount) {
   return slots;
 }
 
-function growFeedWindow(slotBudget = PAGE_SIZE) {
-  let addedSlots = 0;
-  while (addedSlots < slotBudget) {
-    const nextWallpaperPosition = feedWindowStart + visibleFeedCount + 1;
-    const nextSlots = 1 + (shouldInsertAdAfter(nextWallpaperPosition) ? 1 : 0);
-    if (addedSlots + nextSlots > slotBudget && addedSlots > 0) break;
-    visibleFeedCount += 1;
-    addedSlots += nextSlots;
+function wallpapersForSlotBudget(wallpaperStart, availableWallpapers, slotBudget) {
+  let wallpapers = 0;
+  let slots = 0;
+  while (wallpapers < availableWallpapers) {
+    const nextPosition = wallpaperStart + wallpapers + 1;
+    const nextSlots = 1 + (shouldInsertAdAfter(nextPosition) ? 1 : 0);
+    if (slots + nextSlots > slotBudget) break;
+    wallpapers += 1;
+    slots += nextSlots;
   }
+  return wallpapers;
 }
 
 function renderFeed() {
@@ -596,8 +602,8 @@ function renderFeed() {
     if (feedSort === 'recent') return new Date(right.created_at || 0) - new Date(left.created_at || 0);
     return feedTierRank[publicCardTier(right)] - feedTierRank[publicCardTier(left)] || publicCardScore(right) - publicCardScore(left) || new Date(right.created_at || 0) - new Date(left.created_at || 0);
   });
-  const maxStart = Math.max(0, filtered.length - visibleFeedCount);
-  feedWindowStart = Math.min(feedWindowStart, maxStart);
+  feedWindowStart = Math.min(feedWindowStart, Math.max(0, filtered.length - 1));
+  visibleFeedCount = wallpapersForSlotBudget(feedWindowStart, filtered.length - feedWindowStart, visibleFeedSlotBudget);
   const visible = filtered.slice(feedWindowStart, feedWindowStart + visibleFeedCount);
   idleObserver?.disconnect();
   const feedItems = [];
@@ -612,10 +618,10 @@ function renderFeed() {
   status.textContent = filtered.length ? `Showing ${visibleRange} of ${filtered.length} public wallpapers.${algorithmNote}` : 'No public wallpapers match these filters.';
   status.hidden = false;
   const previous = document.getElementById('load-previous');
-  previous.hidden = feedWindowStart === 0;
-  previous.disabled = feedWindowStart === 0;
+  previous.hidden = feedWindowHistory.length === 0;
+  previous.disabled = feedWindowHistory.length === 0;
   loadMore.hidden = visibleEnd >= filtered.length;
-  loadMore.textContent = feedSlotCount(feedWindowStart, visibleFeedCount) < MAX_RENDERED_CARDS ? 'Load more' : 'Show next';
+  loadMore.textContent = visibleFeedSlotBudget < MAX_RENDERED_CARDS ? 'Load more' : 'Show next';
 }
 
 function feedSuggestiveKey(userId) { return `wallverse-show-suggestive:${userId}`; }
@@ -1051,11 +1057,11 @@ async function initialize() {
 if (isHomepageFeed) {
   const loadPrevious = document.getElementById('load-previous');
   loadMore.addEventListener('click', () => {
-    if (feedSlotCount(feedWindowStart, visibleFeedCount) < MAX_RENDERED_CARDS) growFeedWindow(PAGE_SIZE);
-    else feedWindowStart += PAGE_SIZE;
+    if (visibleFeedSlotBudget < MAX_RENDERED_CARDS) visibleFeedSlotBudget = Math.min(MAX_RENDERED_CARDS, visibleFeedSlotBudget + PAGE_SIZE);
+    else { feedWindowHistory.push(feedWindowStart); feedWindowStart += visibleFeedCount; }
     renderFeed();
   });
-  loadPrevious.addEventListener('click', () => { feedWindowStart = Math.max(0, feedWindowStart - PAGE_SIZE); renderFeed(); });
+  loadPrevious.addEventListener('click', () => { feedWindowStart = feedWindowHistory.pop() ?? 0; renderFeed(); });
   const resetAndRenderFeed = () => { resetFeedWindow(); renderFeed(); };
   document.getElementById('feed-search').addEventListener('input', resetAndRenderFeed);
   document.getElementById('feed-rarity').addEventListener('change', resetAndRenderFeed);
