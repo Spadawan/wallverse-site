@@ -213,7 +213,7 @@
     }
     mountBanner(downloadAdPlacement, () => {
       downloadAdPlacement.classList.add('is-unavailable');
-    });
+    }, 'download');
   }
   function startDownloadCountdown() {
     clearDownloadCountdown();

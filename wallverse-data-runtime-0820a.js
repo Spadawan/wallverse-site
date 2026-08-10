@@ -17,7 +17,9 @@ const PUBLIC_CARD_FRAMES_VIEW = 'public_wallpaper_card_frames';
 const PAGE_SIZE = 12;
 const MAX_RENDERED_CARDS = PAGE_SIZE * 3;
 const FEED_CATALOG_PAGE_SIZE = 1000;
-const FIRST_AD_CARD_POSITION = 12;
+// The sponsored placement occupies the twelfth visual feed slot: eleven
+// wallpapers, then the ad. Subsequent placements follow every 15 wallpapers.
+const FIRST_AD_CARD_POSITION = 11;
 const FOLLOWING_AD_CARD_INTERVAL = 15;
 const ADSTERRA_GRID_BANNER_URL = 'https://www.highperformanceformat.com/9b67f852da5d9a4dc099ed07a1153c7d/invoke.js';
 const ADSTERRA_DOWNLOAD_BANNER_URL = 'https://www.highperformanceformat.com/fe410c0ec832e31de5aec22aa9ee26d1/invoke.js';
