@@ -117,7 +117,10 @@
     } catch { return `web-${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`; }
   }
   async function recordView(wallpaperId) {
-    await authReady;
+    // Do not wait for an auth refresh before recording. The Supabase client
+    // already attaches a persisted user token when there is one; otherwise
+    // this immediately uses the anonymous visitor session. Waiting here made
+    // quick opens (notably Spotlight) easy to lose on slower connections.
     const { data, error } = await client.rpc('record_wallpaper_view', {
       wallpaper_id_input: wallpaperId,
       session_id_input: currentUser ? null : anonymousViewSession(),
@@ -262,7 +265,8 @@
   async function recordDownload(wallpaper) {
     if (!wallpaper?.id) return;
     try {
-      await authReady;
+      // As above, let the client use its current token when available and
+      // record guest downloads immediately instead of waiting on auth.
       const { data, error } = await client.rpc('record_wallpaper_download', { wallpaper_id_input: wallpaper.id, quality_input: 'hd' });
       if (error) throw error;
       if (String(data || '').toLowerCase() === 'counted' && currentWallpaper?.id === wallpaper.id) {

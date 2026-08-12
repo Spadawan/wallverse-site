@@ -7,7 +7,7 @@ const WALLVERSE_PUBLIC_CONFIG = {
 const CARD_RELATION = 'user_cards(id,owner_id,card_frame_id,card_frame_type,archived,acquired_at)';
 const AVATAR_PROFILE_SELECT = 'username,avatar_url,avatar_crop_x,avatar_crop_y,avatar_crop_scale,avatar_crop_rotation,avatar_frame_type';
 const SELECT = `id,user_id,title,description,image_url,thumbnail_url,category,quality,width,height,file_size,likes_count,downloads_count,views_count,is_ai,is_suggestive,is_weekly,is_featured,polished_until,created_at,storage_provider,thumbnail_storage_key,hd_storage_key,profiles!wallpapers_user_id_fkey(${AVATAR_PROFILE_SELECT}),wallpaper_tags(tags(name)),${CARD_RELATION}`;
-const SPOTLIGHT_SELECT = `id,title,image_url,thumbnail_url,category,quality,is_weekly,is_featured,storage_provider,thumbnail_storage_key,hd_storage_key,profiles!wallpapers_user_id_fkey(${AVATAR_PROFILE_SELECT}),wallpaper_tags(tags(name)),${CARD_RELATION}`;
+const SPOTLIGHT_SELECT = `id,title,image_url,thumbnail_url,category,quality,likes_count,downloads_count,views_count,is_weekly,is_featured,storage_provider,thumbnail_storage_key,hd_storage_key,profiles!wallpapers_user_id_fkey(${AVATAR_PROFILE_SELECT}),wallpaper_tags(tags(name)),${CARD_RELATION}`;
 const FEATURED_SELECT = SELECT;
 const CREATOR_STATS_SELECT = 'id,quality,likes_count,downloads_count,views_count,is_featured,is_weekly';
 // This public, read-only view deliberately exposes no owner, inventory, or
