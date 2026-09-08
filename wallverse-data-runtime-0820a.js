@@ -22,6 +22,8 @@ const FEED_CATALOG_PAGE_SIZE = 1000;
 // wallpapers, then the ad. Subsequent placements follow every 15 wallpapers.
 const FIRST_AD_CARD_POSITION = PAGE_SIZE - 1;
 const FOLLOWING_AD_CARD_INTERVAL = 15;
+// Card ads are paused temporarily. The download placement remains active.
+const CARD_ADS_ENABLED = false;
 const ADSTERRA_GRID_BANNER_URL = 'https://www.highperformanceformat.com/9b67f852da5d9a4dc099ed07a1153c7d/invoke.js';
 const ADSTERRA_DOWNLOAD_BANNER_URL = 'https://www.highperformanceformat.com/fe410c0ec832e31de5aec22aa9ee26d1/invoke.js';
 const ADSTERRA_NATIVE_URL = 'https://pl30782857.effectivecpmnetwork.com/522b24f46ec68fe89a546004b33ecee5/invoke.js';
@@ -351,6 +353,7 @@ function collapseAdCard(card) {
 }
 
 function shouldInsertAdAfter(position) {
+  if (!CARD_ADS_ENABLED) return false;
   const cardPosition = Number(position) || 0;
   return cardPosition === FIRST_AD_CARD_POSITION || (cardPosition > FIRST_AD_CARD_POSITION && (cardPosition - FIRST_AD_CARD_POSITION) % FOLLOWING_AD_CARD_INTERVAL === 0);
 }
@@ -609,7 +612,7 @@ function renderFeed() {
   const feedItems = [];
   visible.forEach((wallpaper, index) => {
     feedItems.push(renderCard(wallpaper));
-    if (shouldInsertAdAfter(feedWindowStart + index + 1)) feedItems.push(renderAdCard());
+    if (CARD_ADS_ENABLED && shouldInsertAdAfter(feedWindowStart + index + 1)) feedItems.push(renderAdCard());
   });
   grid.replaceChildren(...feedItems);
   const algorithmNote = feedSort === 'algorithm' && feedAlgorithmProfile?.signalCount < 2 ? ' Save, like or download wallpapers to personalize this feed.' : '';
@@ -1106,5 +1109,5 @@ if (isHomepageFeed) {
 
 window.WallverseAvatarCrop = { apply: applyAvatarCrop };
 window.WallverseAds = { mountBanner: mountAdsterraBanner };
-window.WallverseCards = { thumbnailUrl, downloadUrl, wallpaperPath, tagsFor, qualityLabel, compactNumber, publicCardScore, publicCardTier, cardFrameFor, frameForCardRecord, enablePublicCardMotion, createAdCard: renderAdCard, shouldInsertAdAfter };
+window.WallverseCards = { thumbnailUrl, downloadUrl, wallpaperPath, tagsFor, qualityLabel, compactNumber, publicCardScore, publicCardTier, cardFrameFor, frameForCardRecord, enablePublicCardMotion, createAdCard: CARD_ADS_ENABLED ? renderAdCard : null, shouldInsertAdAfter };
 window.dispatchEvent(new Event('wallverse:data-ready'));
