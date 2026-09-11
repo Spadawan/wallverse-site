@@ -1,0 +1,7 @@
+/* Keep the vanishing point local to each card. A perspective on the entire
+   growing grid distorts cards increasingly as more rows are appended. */
+#wallpaper-grid,
+#profile-wallpaper-grid,
+html .seo-catalog {
+  perspective: none;
+}
