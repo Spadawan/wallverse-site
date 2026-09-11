@@ -110,7 +110,10 @@
     document.getElementById('wallpaper-schema')?.remove();
     const hasServerDetail = Boolean(document.getElementById('wallpaper-seo-content'));
     document.getElementById('wallpaper-seo-content')?.remove();
-    if (hasServerDetail || history.state?.wallverseSeoDetail) revealHome();
+    if (hasServerDetail || history.state?.wallverseSeoDetail) {
+      document.getElementById('seo-main-content')?.remove();
+      revealHome();
+    }
     document.title = defaultSeo.title;
     meta('meta[name="robots"]', { name: 'robots' }, defaultSeo.robots);
     meta('meta[name="twitter:title"]', { name: 'twitter:title' }, defaultSeo.ogTitle);
@@ -159,7 +162,7 @@
       }
     }
     if (isWallpaperRoute() && `${window.location.pathname}${window.location.search}` !== requestedPath) return;
-    document.getElementById('wallpaper-seo-content')?.remove();
+    document.getElementById('seo-main-content')?.remove();
     hideNotFound();
     const canonicalPath = wallpaperPath(wallpaper);
     if (`${window.location.pathname}${window.location.search}` !== canonicalPath) {
