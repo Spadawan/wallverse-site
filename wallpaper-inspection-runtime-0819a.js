@@ -47,8 +47,14 @@
 
   function profileFor(value) { return Array.isArray(value) ? value[0] : value; }
   function setMessage(text = '') { message.textContent = text; message.hidden = !text; }
+  let inspectionPageScroll = null;
   function setInspectionOpenState(open) {
     document.documentElement.classList.toggle('inspection-open', Boolean(open));
+    if (!open && inspectionPageScroll !== null) {
+      document.documentElement.classList.remove('inspection-page');
+      window.scrollTo({ top: inspectionPageScroll, behavior: 'instant' });
+      inspectionPageScroll = null;
+    }
   }
   function formatDate(value) {
     const date = new Date(value || 0);
@@ -333,7 +339,18 @@
   }
   async function openInspection(wallpaper) {
     currentWallpaper = wallpaper; renderWallpaper(wallpaper);
-    if (!dialog.open) dialog.showModal();
+    if (!dialog.open) {
+      // Let embedded browsers see the document's actual scroll position.
+      // A scrolling modal leaves the document at zero even deep in the card.
+      if (window.matchMedia('(max-width:820px)').matches) {
+        inspectionPageScroll = window.scrollY;
+        document.documentElement.classList.add('inspection-page');
+        dialog.show();
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      } else {
+        dialog.showModal();
+      }
+    }
     setInspectionOpenState(true);
     await authReady;
     renderAuthState();

@@ -333,13 +333,14 @@ img { -webkit-user-drag:none; user-select:none; }
   .creator-dialog { padding-top:calc(64px + env(safe-area-inset-top)); }
 }
 
-/* Threads' Android in-app browser can trap reverse swipes inside a full-screen
-   native dialog when its dynamic viewport height and overscroll containment
-   change together. Give Card Inspection one stable, vertically scrollable
-   surface instead. */
-@media (max-width:820px) {
-  .inspection-dialog { height:100vh; min-height:100vh; max-height:100vh; height:100svh; min-height:100svh; max-height:100svh; overflow-y:scroll; overscroll-behavior-y:auto; touch-action:pan-y; -webkit-overflow-scrolling:auto; }
-}
+/* Mobile inspection scrolls the document, so in-app browser swipe handling
+   sees the same scroll position as the user. Keep this mode through rotation. */
+html.inspection-page { overflow-y:auto; scroll-behavior:auto; }
+html.inspection-page body { overflow:visible; }
+html.inspection-page body > :not(dialog):not(script):not(style) { display:none !important; }
+html.inspection-page .inspection-dialog[open] { position:relative; inset:auto; width:100%; max-width:none; height:auto; min-height:100vh; min-height:100svh; max-height:none; margin:0; padding:0; overflow:visible; border:0; border-radius:0; }
+html.inspection-page .inspection-layout { min-height:0; }
+html.inspection-page .inspection-details { overflow:visible; }
 
 @media (max-width:420px) {
   .inspection-stage { min-height:540px; padding-inline:16px; }
