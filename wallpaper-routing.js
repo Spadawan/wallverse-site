@@ -108,8 +108,9 @@
   }
   function restoreSeo() {
     document.getElementById('wallpaper-schema')?.remove();
+    const hasServerDetail = Boolean(document.getElementById('wallpaper-seo-content'));
     document.getElementById('wallpaper-seo-content')?.remove();
-    revealHome();
+    if (hasServerDetail || history.state?.wallverseSeoDetail) revealHome();
     document.title = defaultSeo.title;
     meta('meta[name="robots"]', { name: 'robots' }, defaultSeo.robots);
     meta('meta[name="twitter:title"]', { name: 'twitter:title' }, defaultSeo.ogTitle);
@@ -189,7 +190,7 @@
   function bootstrapDirectRoute() {
     if (!isWallpaperRoute() || history.state?.wallverseWallpaper) return;
     const route = `${window.location.pathname}${window.location.search}`;
-    history.replaceState({ wallverseBase: true }, '', '/');
+    history.replaceState({ wallverseBase: true, wallverseSeoDetail: true }, '', '/');
     history.pushState({ wallverseWallpaper: true }, '', route);
   }
   function navigate(wallpaper) {

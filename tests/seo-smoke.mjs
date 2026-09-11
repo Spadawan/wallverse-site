@@ -32,6 +32,8 @@ for (const url of sitemapLocations) {
 assert.ok(imageCount>0,'Sitemap contains images');
 const catalog = await get('/wallpapers/');
 assert.equal([...catalog.html.matchAll(/class="wallpaper"/g)].length,24);
+assert.equal([...catalog.html.matchAll(/tier--(common|uncommon|rare|epic|legendary|mythic)/g)].length,24);
+assert.equal([...catalog.html.matchAll(/data-card-frame="[^"]+"/g)].length,24);
 const link = catalog.html.match(/class="wallpaper" href="([^"]+)"/)[1];
 const detail = await get(link);
 assert.match(detail.html,/id="wallpaper-seo-content"/);
