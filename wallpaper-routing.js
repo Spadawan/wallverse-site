@@ -141,13 +141,23 @@
     ignoreInspectionClose = true;
     viewer.close();
   }
-  function present(wallpaper) {
+  async function present(wallpaper) {
     const viewer = inspection();
     if (!viewer?.open) return;
+    const requestedPath = wallpaperPath(wallpaper);
     if (!String(wallpaper.description || '').trim()) {
       const description = serverDescription();
       if (description) wallpaper = { ...wallpaper, description };
+      else {
+        try {
+          const fullWallpaper = await helpers().fetchSharedWallpaper?.(String(wallpaper.id || '').replace(/-/g, '').slice(0, 8), { fresh: true });
+          if (fullWallpaper?.description) wallpaper = { ...wallpaper, ...fullWallpaper };
+        } catch (error) {
+          console.warn('Wallpaper description could not be refreshed.', error);
+        }
+      }
     }
+    if (isWallpaperRoute() && `${window.location.pathname}${window.location.search}` !== requestedPath) return;
     document.getElementById('wallpaper-seo-content')?.remove();
     hideNotFound();
     const canonicalPath = wallpaperPath(wallpaper);
@@ -161,7 +171,7 @@
     const attempt = ++routeAttempt;
     if (!isWallpaperRoute()) { hideNotFound(); restoreSeo(); closeForHistory(); restoreFeedState(); return; }
     const wallpaper = findWallpaper();
-    if (wallpaper) { present(wallpaper); return; }
+    if (wallpaper) { await present(wallpaper); return; }
     if (!Array.isArray(window.WallversePublicCatalog)) return;
     const shortId = shortIdFromRoute();
     const fetchSharedWallpaper = helpers().fetchSharedWallpaper;
@@ -169,7 +179,7 @@
     try {
       const sharedWallpaper = await fetchSharedWallpaper(shortId);
       if (attempt !== routeAttempt || !isWallpaperRoute() || shortIdFromRoute() !== shortId) return;
-      if (sharedWallpaper) { present(sharedWallpaper); return; }
+      if (sharedWallpaper) { await present(sharedWallpaper); return; }
     } catch (error) {
       console.warn('Shared wallpaper could not be resolved.', error);
     }
@@ -188,7 +198,7 @@
       history.replaceState({ ...(history.state || {}), wallverseFeedState: feedState() }, '', window.location.href);
       history.pushState({ wallverseWallpaper: true, wallpaperId: wallpaper.id }, '', target);
     }
-    present(wallpaper);
+    void present(wallpaper);
   }
   function onInspectionClosed() {
     if (ignoreInspectionClose) { ignoreInspectionClose = false; return; }

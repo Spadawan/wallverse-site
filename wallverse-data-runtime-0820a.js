@@ -201,11 +201,15 @@ function fetchWallpapers(filters) {
   return fetchPublic('wallpapers', { select: SELECT, ...filters });
 }
 
-async function fetchSharedWallpaper(shortId) {
+async function fetchSharedWallpaper(shortId, { fresh = false } = {}) {
   const normalized = String(shortId || '').replace(/-/g, '').toLowerCase();
   if (!/^[a-f0-9]{8}$/.test(normalized)) return null;
   const catalogMatch = loadedWallpapers.find((wallpaper) => String(wallpaper.id || '').replace(/-/g, '').toLowerCase().startsWith(normalized));
-  if (catalogMatch) return catalogMatch;
+  if (catalogMatch && !fresh) return catalogMatch;
+  if (fresh) {
+    const rows = await fetchWallpapers({ status: 'eq.approved', and: `(id.gte.${normalized}-0000-0000-0000-000000000000,id.lte.${normalized}-ffff-ffff-ffff-ffffffffffff)`, limit: '2' });
+    return rows.length === 1 ? decorateCardFrame(rows[0]) : catalogMatch || null;
+  }
   let offset = 0;
   while (true) {
     const rows = await fetchWallpapers({ status: 'eq.approved', is_suggestive: 'eq.true', order: 'created_at.desc', limit: String(FEED_CATALOG_PAGE_SIZE), offset: String(offset) });
