@@ -211,7 +211,19 @@
     owner.replaceChildren(avatar(profile, { framed: true }));
     const ownerCopy = document.createElement('div'); const eyebrow = document.createElement('span'); eyebrow.textContent = 'Current owner';
     const ownerName = document.createElement('strong'); ownerName.textContent = profile?.username ? `@${profile.username}` : 'Unknown creator'; ownerCopy.append(eyebrow, ownerName); owner.append(ownerCopy);
-    const description = document.getElementById('inspection-description'); description.textContent = wallpaper.description || ''; description.hidden = !wallpaper.description;
+    const description = document.getElementById('inspection-description');
+    const descriptionText = String(wallpaper.description || '').trim();
+    description.replaceChildren();
+    description.hidden = !descriptionText;
+    if (descriptionText) {
+      const label = document.createElement('strong');
+      label.className = 'inspection-description__label';
+      label.textContent = 'Description';
+      const copy = document.createElement('span');
+      copy.className = 'inspection-description__copy';
+      copy.textContent = descriptionText;
+      description.append(label, copy);
+    }
     const tags = helpers.tagsFor(wallpaper); const tagsNode = document.getElementById('inspection-tags');
     tagsNode.replaceChildren(...tags.map((tag) => { const node = document.createElement('button'); node.type = 'button'; node.className = 'inspection-tag'; node.textContent = tag; node.setAttribute('aria-label', `Search wallpapers tagged ${tag}`); node.addEventListener('click', () => { dialog.close(); window.dispatchEvent(new CustomEvent('wallverse:feed-search', { detail: { query: tag } })); }); return node; }));
     const facts = [
