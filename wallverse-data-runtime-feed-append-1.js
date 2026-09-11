@@ -96,13 +96,14 @@ function registerIdleCard(card) {
 }
 
 function enablePublicCardMotion(card) {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || window.matchMedia('(pointer: coarse)').matches) return;
+  if (!card || card.dataset.cardMotion === 'true' || window.matchMedia('(prefers-reduced-motion: reduce)').matches || window.matchMedia('(pointer: coarse)').matches) return;
+  card.dataset.cardMotion = 'true';
   card.addEventListener('pointermove', (event) => {
     const rect = card.getBoundingClientRect();
-    const x = (event.clientX - rect.left) / rect.width;
-    const y = (event.clientY - rect.top) / rect.height;
-    card.style.setProperty('--card-rx', `${(0.5 - y) * 8}deg`);
-    card.style.setProperty('--card-ry', `${(x - 0.5) * 10}deg`);
+    const x = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+    const y = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
+    card.style.setProperty('--card-rx', `${(0.5 - y) * 5}deg`);
+    card.style.setProperty('--card-ry', `${(x - 0.5) * 6}deg`);
     card.style.setProperty('--light-x', `${x * 100}%`);
     card.style.setProperty('--light-y', `${y * 100}%`);
   });
@@ -203,18 +204,8 @@ async function fetchSharedWallpaper(shortId, { fresh = false } = {}) {
   if (!/^[a-f0-9]{8}$/.test(normalized)) return null;
   const catalogMatch = loadedWallpapers.find((wallpaper) => String(wallpaper.id || '').replace(/-/g, '').toLowerCase().startsWith(normalized));
   if (catalogMatch && !fresh) return catalogMatch;
-  if (fresh) {
-    const rows = await fetchWallpapers({ status: 'eq.approved', and: `(id.gte.${normalized}-0000-0000-0000-000000000000,id.lte.${normalized}-ffff-ffff-ffff-ffffffffffff)`, limit: '2' });
-    return rows.length === 1 ? decorateCardFrame(rows[0]) : catalogMatch || null;
-  }
-  let offset = 0;
-  while (true) {
-    const rows = await fetchWallpapers({ status: 'eq.approved', is_suggestive: 'eq.true', order: 'created_at.desc', limit: String(FEED_CATALOG_PAGE_SIZE), offset: String(offset) });
-    const match = rows.find((wallpaper) => String(wallpaper.id || '').replace(/-/g, '').toLowerCase().startsWith(normalized));
-    if (match) return decorateCardFrame(match);
-    if (rows.length < FEED_CATALOG_PAGE_SIZE) return null;
-    offset += rows.length;
-  }
+  const rows = await fetchWallpapers({ status: 'eq.approved', and: `(id.gte.${normalized}-0000-0000-0000-000000000000,id.lte.${normalized}-ffff-ffff-ffff-ffffffffffff)`, limit: '2' });
+  return rows.length === 1 ? decorateCardFrame(rows[0]) : catalogMatch || null;
 }
 
 function applyAvatarCrop(avatar, profile) {
