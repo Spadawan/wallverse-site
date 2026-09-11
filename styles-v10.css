@@ -333,6 +333,14 @@ img { -webkit-user-drag:none; user-select:none; }
   .creator-dialog { padding-top:calc(64px + env(safe-area-inset-top)); }
 }
 
+/* Threads' Android in-app browser can trap reverse swipes inside a full-screen
+   native dialog when its dynamic viewport height and overscroll containment
+   change together. Give Card Inspection one stable, vertically scrollable
+   surface instead. */
+@media (max-width:820px) {
+  .inspection-dialog { height:100vh; min-height:100vh; max-height:100vh; height:100svh; min-height:100svh; max-height:100svh; overflow-y:scroll; overscroll-behavior-y:auto; touch-action:pan-y; -webkit-overflow-scrolling:auto; }
+}
+
 @media (max-width:420px) {
   .inspection-stage { min-height:540px; padding-inline:16px; }
   .inspection-card { width:min(276px,82vw); }
