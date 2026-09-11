@@ -201,6 +201,21 @@ function fetchWallpapers(filters) {
   return fetchPublic('wallpapers', { select: SELECT, ...filters });
 }
 
+async function fetchSharedWallpaper(shortId) {
+  const normalized = String(shortId || '').replace(/-/g, '').toLowerCase();
+  if (!/^[a-f0-9]{8}$/.test(normalized)) return null;
+  const catalogMatch = loadedWallpapers.find((wallpaper) => String(wallpaper.id || '').replace(/-/g, '').toLowerCase().startsWith(normalized));
+  if (catalogMatch) return catalogMatch;
+  let offset = 0;
+  while (true) {
+    const rows = await fetchWallpapers({ status: 'eq.approved', is_suggestive: 'eq.true', order: 'created_at.desc', limit: String(FEED_CATALOG_PAGE_SIZE), offset: String(offset) });
+    const match = rows.find((wallpaper) => String(wallpaper.id || '').replace(/-/g, '').toLowerCase().startsWith(normalized));
+    if (match) return decorateCardFrame(match);
+    if (rows.length < FEED_CATALOG_PAGE_SIZE) return null;
+    offset += rows.length;
+  }
+}
+
 function applyAvatarCrop(avatar, profile) {
   if (!avatar) return;
   // The official @Wallverse mark is a deliberately composed brand asset, not a user portrait.
@@ -1125,5 +1140,5 @@ if (isHomepageFeed) {
 
 window.WallverseAvatarCrop = { apply: applyAvatarCrop };
 window.WallverseAds = { mountBanner: mountAdsterraBanner };
-window.WallverseCards = { thumbnailUrl, downloadUrl, wallpaperPath, tagsFor, qualityLabel, compactNumber, publicCardScore, publicCardTier, cardFrameFor, frameForCardRecord, enablePublicCardMotion, createAdCard: CARD_ADS_ENABLED ? renderAdCard : null, shouldInsertAdAfter };
+window.WallverseCards = { thumbnailUrl, downloadUrl, wallpaperPath, tagsFor, qualityLabel, compactNumber, publicCardScore, publicCardTier, cardFrameFor, frameForCardRecord, enablePublicCardMotion, createAdCard: CARD_ADS_ENABLED ? renderAdCard : null, shouldInsertAdAfter, fetchSharedWallpaper };
 window.dispatchEvent(new Event('wallverse:data-ready'));

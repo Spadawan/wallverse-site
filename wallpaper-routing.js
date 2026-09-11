@@ -15,6 +15,7 @@
   };
   let ignoreInspectionClose = false;
   let routeNotFound;
+  let routeAttempt = 0;
 
   function isWallpaperRoute() { return /^\/wallpaper\/[^/]+\/?$/.test(window.location.pathname); }
   function wallpaperPath(wallpaper) {
@@ -96,11 +97,24 @@
     updateSeo(wallpaper);
     viewer.open(wallpaper);
   }
-  function openCurrentRoute() {
+  async function openCurrentRoute() {
+    const attempt = ++routeAttempt;
     if (!isWallpaperRoute()) { hideNotFound(); restoreSeo(); closeForHistory(); return; }
     const wallpaper = findWallpaper();
-    if (wallpaper) present(wallpaper);
-    else if (Array.isArray(window.WallversePublicCatalog)) { restoreSeo(); closeForHistory(); showNotFound(); }
+    if (wallpaper) { present(wallpaper); return; }
+    if (!Array.isArray(window.WallversePublicCatalog)) return;
+    const shortId = shortIdFromRoute();
+    const fetchSharedWallpaper = helpers().fetchSharedWallpaper;
+    if (!shortId || typeof fetchSharedWallpaper !== 'function') { restoreSeo(); closeForHistory(); showNotFound(); return; }
+    try {
+      const sharedWallpaper = await fetchSharedWallpaper(shortId);
+      if (attempt !== routeAttempt || !isWallpaperRoute() || shortIdFromRoute() !== shortId) return;
+      if (sharedWallpaper) { present(sharedWallpaper); return; }
+    } catch (error) {
+      console.warn('Shared wallpaper could not be resolved.', error);
+    }
+    if (attempt !== routeAttempt || !isWallpaperRoute()) return;
+    restoreSeo(); closeForHistory(); showNotFound();
   }
   function bootstrapDirectRoute() {
     if (!isWallpaperRoute() || history.state?.wallverseWallpaper) return;

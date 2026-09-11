@@ -15,6 +15,9 @@
   const downloadButton = document.getElementById('inspection-download');
   const commentForm = document.getElementById('inspection-comment-form');
   const signInButton = document.getElementById('inspection-sign-in');
+  const suggestiveGate = document.getElementById('inspection-suggestive-gate');
+  const suggestiveMessage = document.getElementById('inspection-suggestive-message');
+  const suggestiveAuthButton = document.getElementById('inspection-suggestive-auth');
   const message = document.getElementById('inspection-message');
   let currentWallpaper = null;
   let currentUser = null;
@@ -90,6 +93,24 @@
     signInButton.hidden = Boolean(currentUser);
     if (!currentUser) { liked = false; favorited = false; }
     renderSocialState();
+    renderSuggestiveState();
+  }
+  function suggestivePreferenceEnabled() {
+    if (!currentUser) return false;
+    try { return window.localStorage.getItem(`wallverse-show-suggestive:${currentUser.id}`) === 'true'; } catch { return false; }
+  }
+  function renderSuggestiveState() {
+    if (!suggestiveGate) return;
+    const locked = Boolean(currentWallpaper?.is_suggestive && !suggestivePreferenceEnabled());
+    dialog.classList.toggle('is-suggestive-locked', locked);
+    suggestiveGate.hidden = !locked;
+    if (locked) {
+      suggestiveMessage.textContent = currentUser ? 'Suggestive images are hidden by your current settings.' : 'Sign up or sign in to view this image.';
+      suggestiveAuthButton.hidden = Boolean(currentUser);
+    }
+    downloadButton.disabled = locked;
+    downloadButton.setAttribute('aria-disabled', String(locked));
+    downloadButton.title = locked ? 'Suggestive content is hidden' : 'Unlock an HD download';
   }
   function renderSocialState() {
     likeButton.classList.toggle('is-active', liked); likeButton.setAttribute('aria-pressed', String(liked));
@@ -200,6 +221,7 @@
     downloadButton.title = 'Unlock an HD download';
     downloadButton.querySelector('strong').textContent = 'Download';
     downloadButton.querySelector('small').textContent = 'HD';
+    renderSuggestiveState();
   }
 
   function clearDownloadCountdown() {
@@ -381,6 +403,7 @@
   downloadDialog.addEventListener('close', clearDownloadCountdown);
   downloadDialog.addEventListener('click', (event) => { if (event.target === downloadDialog) downloadDialog.close(); });
   signInButton.addEventListener('click', () => { dialog.close(); document.getElementById('auth-trigger')?.click(); });
+  suggestiveAuthButton?.addEventListener('click', () => document.getElementById('auth-trigger')?.click());
   document.querySelector('[data-close-inspection]').addEventListener('click', () => dialog.close());
   dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });
   dialog.addEventListener('close', () => { setInspectionOpenState(false); if (downloadDialog.open) downloadDialog.close(); window.WallverseWallpaperRouter?.onInspectionClosed?.(); });
