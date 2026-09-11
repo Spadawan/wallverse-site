@@ -16,7 +16,6 @@ const CREATOR_STATS_SELECT = 'id,quality,likes_count,downloads_count,views_count
 const PUBLIC_CARD_FRAMES_VIEW = 'public_wallpaper_card_frames';
 // PAGE_SIZE is the number of visible grid slots, including sponsored cards.
 const PAGE_SIZE = 12;
-const MAX_RENDERED_CARDS = PAGE_SIZE * 3;
 const FEED_CATALOG_PAGE_SIZE = 1000;
 // The sponsored placement occupies the twelfth visual feed slot: eleven
 // wallpapers, then the ad. Subsequent placements follow every 15 wallpapers.
@@ -69,8 +68,6 @@ let feedSort = 'random';
 const randomFeedSeed = Math.floor(Math.random() * 0x100000000);
 let visibleFeedCount = FIRST_AD_CARD_POSITION;
 let visibleFeedSlotBudget = PAGE_SIZE;
-let feedWindowStart = 0;
-const feedWindowHistory = [];
 let feedRequestRevision = 0;
 let feedShowSuggestive = false;
 let feedUser = null;
@@ -597,10 +594,8 @@ function randomSortedFeed(wallpapers) {
 }
 
 function resetFeedWindow() {
-  feedWindowStart = 0;
   visibleFeedCount = FIRST_AD_CARD_POSITION;
   visibleFeedSlotBudget = PAGE_SIZE;
-  feedWindowHistory.length = 0;
 }
 
 function feedSlotCount(wallpaperStart, wallpaperCount) {
@@ -624,7 +619,7 @@ function wallpapersForSlotBudget(wallpaperStart, availableWallpapers, slotBudget
   return wallpapers;
 }
 
-function renderFeed() {
+function renderFeed({ append = false } = {}) {
   const query = document.getElementById('feed-search')?.value.trim().toLocaleLowerCase() || '';
   const rarity = document.getElementById('feed-rarity')?.value || 'all';
   const category = document.getElementById('feed-category')?.value || 'all';
@@ -639,26 +634,26 @@ function renderFeed() {
     if (feedSort === 'recent') return new Date(right.created_at || 0) - new Date(left.created_at || 0);
     return feedTierRank[publicCardTier(right)] - feedTierRank[publicCardTier(left)] || publicCardScore(right) - publicCardScore(left) || new Date(right.created_at || 0) - new Date(left.created_at || 0);
   });
-  feedWindowStart = Math.min(feedWindowStart, Math.max(0, filtered.length - 1));
-  visibleFeedCount = wallpapersForSlotBudget(feedWindowStart, filtered.length - feedWindowStart, visibleFeedSlotBudget);
-  const visible = filtered.slice(feedWindowStart, feedWindowStart + visibleFeedCount);
-  idleObserver?.disconnect();
+  visibleFeedCount = wallpapersForSlotBudget(0, filtered.length, visibleFeedSlotBudget);
+  const visible = filtered.slice(0, visibleFeedCount);
+  const existingCards = append ? grid.querySelectorAll('.collectible-card').length : 0;
+  const appendFrom = Math.min(existingCards, visible.length);
+  if (!append || !existingCards) idleObserver?.disconnect();
   const feedItems = [];
-  visible.forEach((wallpaper, index) => {
+  visible.slice(appendFrom).forEach((wallpaper, index) => {
+    const position = appendFrom + index + 1;
     feedItems.push(renderCard(wallpaper));
-    if (CARD_ADS_ENABLED && shouldInsertAdAfter(feedWindowStart + index + 1)) feedItems.push(renderAdCard());
+    if (CARD_ADS_ENABLED && shouldInsertAdAfter(position)) feedItems.push(renderAdCard());
   });
-  grid.replaceChildren(...feedItems);
+  if (append && existingCards) grid.append(...feedItems);
+  else grid.replaceChildren(...feedItems);
   const algorithmNote = feedSort === 'algorithm' && feedAlgorithmProfile?.signalCount < 2 ? ' Save, like or download wallpapers to personalize this feed.' : '';
-  const visibleEnd = feedWindowStart + visible.length;
-  const visibleRange = visible.length ? `${feedWindowStart + 1}–${visibleEnd}` : '0';
+  const visibleEnd = visible.length;
+  const visibleRange = visible.length ? `1–${visibleEnd}` : '0';
   status.textContent = filtered.length ? `Showing ${visibleRange} of ${filtered.length} public wallpapers.${algorithmNote}` : 'No public wallpapers match these filters.';
   status.hidden = false;
-  const previous = document.getElementById('load-previous');
-  previous.hidden = feedWindowHistory.length === 0;
-  previous.disabled = feedWindowHistory.length === 0;
   loadMore.hidden = visibleEnd >= filtered.length;
-  loadMore.textContent = visibleFeedSlotBudget < MAX_RENDERED_CARDS ? 'Load more' : 'Show next';
+  loadMore.textContent = 'Load more';
 }
 
 function feedSuggestiveKey(userId) { return `wallverse-show-suggestive:${userId}`; }
@@ -1092,13 +1087,10 @@ async function initialize() {
 }
 
 if (isHomepageFeed) {
-  const loadPrevious = document.getElementById('load-previous');
   loadMore.addEventListener('click', () => {
-    if (visibleFeedSlotBudget < MAX_RENDERED_CARDS) visibleFeedSlotBudget = Math.min(MAX_RENDERED_CARDS, visibleFeedSlotBudget + PAGE_SIZE);
-    else { feedWindowHistory.push(feedWindowStart); feedWindowStart += visibleFeedCount; }
-    renderFeed();
+    visibleFeedSlotBudget += PAGE_SIZE;
+    renderFeed({ append: true });
   });
-  loadPrevious.addEventListener('click', () => { feedWindowStart = feedWindowHistory.pop() ?? 0; renderFeed(); });
   const resetAndRenderFeed = () => { resetFeedWindow(); renderFeed(); };
   document.getElementById('feed-search').addEventListener('input', resetAndRenderFeed);
   document.getElementById('feed-rarity').addEventListener('change', resetAndRenderFeed);
