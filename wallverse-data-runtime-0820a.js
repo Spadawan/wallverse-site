@@ -65,7 +65,8 @@ const isHomepageFeed = Boolean(grid && loadMore && spotlightCard);
 let cardIndex = 0;
 let idleObserver;
 let loadedWallpapers = [];
-let feedSort = 'popular';
+let feedSort = 'random';
+const randomFeedSeed = Math.floor(Math.random() * 0x100000000);
 let visibleFeedCount = FIRST_AD_CARD_POSITION;
 let visibleFeedSlotBudget = PAGE_SIZE;
 let feedWindowStart = 0;
@@ -463,8 +464,9 @@ function renderAdCard(variant = 'grid') {
 
 const feedTierRank = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4, mythic: 5 };
 function updateFeedSortControls() {
-  const popular = document.getElementById('feed-sort-popular'); const recent = document.getElementById('feed-sort-recent'); const algorithm = document.getElementById('feed-sort-algorithm');
-  if (!popular || !recent) return;
+  const random = document.getElementById('feed-sort-random'); const popular = document.getElementById('feed-sort-popular'); const recent = document.getElementById('feed-sort-recent'); const algorithm = document.getElementById('feed-sort-algorithm');
+  if (!random || !popular || !recent) return;
+  random.classList.toggle('is-active', feedSort === 'random'); random.setAttribute('aria-pressed', String(feedSort === 'random'));
   popular.classList.toggle('is-active', feedSort === 'popular'); popular.setAttribute('aria-pressed', String(feedSort === 'popular'));
   recent.classList.toggle('is-active', feedSort === 'recent'); recent.setAttribute('aria-pressed', String(feedSort === 'recent'));
   if (algorithm) {
@@ -563,6 +565,18 @@ function algorithmSortedFeed(wallpapers) {
   const seen = scored.filter(({ wallpaper }) => profile.interactedWallpaperIds.has(wallpaper.id));
   return [...unseen, ...seen].map(({ wallpaper }) => wallpaper);
 }
+
+function randomFeedRank(wallpaper) {
+  const value = String(wallpaper?.id || wallpaper?.image_url || '');
+  let hash = randomFeedSeed;
+  for (let index = 0; index < value.length; index += 1) hash = Math.imul(hash ^ value.charCodeAt(index), 16777619);
+  return hash >>> 0;
+}
+
+function randomSortedFeed(wallpapers) {
+  return [...wallpapers].sort((left, right) => randomFeedRank(left) - randomFeedRank(right) || String(left.id || '').localeCompare(String(right.id || '')));
+}
+
 function resetFeedWindow() {
   feedWindowStart = 0;
   visibleFeedCount = FIRST_AD_CARD_POSITION;
@@ -600,7 +614,8 @@ function renderFeed() {
     const searchable = [wallpaper.title, wallpaper.category, wallpaper.profiles?.username, cardOwnerProfileFor(wallpaper)?.username, ...tagsFor(wallpaper)].filter(Boolean).join(' ').toLocaleLowerCase();
     return (!query || searchable.includes(query)) && (rarity === 'all' || publicCardTier(wallpaper) === rarity) && (category === 'all' || String(wallpaper.category || '').toLocaleLowerCase() === category) && (quality === 'all' || String(wallpaper.quality || '').toLocaleLowerCase() === quality);
   });
-  if (feedSort === 'algorithm') filtered.splice(0, filtered.length, ...algorithmSortedFeed(filtered));
+  if (feedSort === 'random') filtered.splice(0, filtered.length, ...randomSortedFeed(filtered));
+  else if (feedSort === 'algorithm') filtered.splice(0, filtered.length, ...algorithmSortedFeed(filtered));
   else filtered.sort((left, right) => {
     if (feedSort === 'recent') return new Date(right.created_at || 0) - new Date(left.created_at || 0);
     return feedTierRank[publicCardTier(right)] - feedTierRank[publicCardTier(left)] || publicCardScore(right) - publicCardScore(left) || new Date(right.created_at || 0) - new Date(left.created_at || 0);
@@ -1070,6 +1085,7 @@ if (isHomepageFeed) {
   document.getElementById('feed-rarity').addEventListener('change', resetAndRenderFeed);
   document.getElementById('feed-category').addEventListener('change', resetAndRenderFeed);
   document.getElementById('feed-quality').addEventListener('change', resetAndRenderFeed);
+  document.getElementById('feed-sort-random').addEventListener('click', () => { feedSort = 'random'; resetFeedWindow(); updateFeedSortControls(); renderFeed(); });
   document.getElementById('feed-sort-popular').addEventListener('click', () => { feedSort = 'popular'; resetFeedWindow(); updateFeedSortControls(); renderFeed(); });
   document.getElementById('feed-sort-recent').addEventListener('click', () => { feedSort = 'recent'; resetFeedWindow(); updateFeedSortControls(); renderFeed(); });
   document.getElementById('feed-sort-algorithm')?.addEventListener('click', async () => {
