@@ -1,5 +1,5 @@
 {
   "version": 1,
-  "include": ["/w/*"],
+  "include": ["/w/*", "/wallpaper/*", "/wallpapers", "/wallpapers/*", "/sitemap.xml"],
   "exclude": []
 }

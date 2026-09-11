@@ -333,6 +333,8 @@ img { -webkit-user-drag:none; user-select:none; }
   .creator-dialog { padding-top:calc(64px + env(safe-area-inset-top)); }
 }
 
+.seo-discovery { padding-block:30px; line-height:1.7; }.seo-discovery p { max-width:800px; color:var(--muted); margin:14px 0; }.seo-discovery nav { display:flex; flex-wrap:wrap; gap:10px 20px; }.seo-discovery a,.wallpaper-seo-content a { color:var(--cyan); text-decoration:underline; text-underline-offset:4px; }.wallpaper-seo-content { padding-block:40px; line-height:1.7; }.wallpaper-seo-content h1 { margin:24px 0; }.wallpaper-seo-content>img { width:min(360px,100%); height:auto; border-radius:24px; }.wallpaper-seo-content p { margin:20px 0; max-width:800px; }.wallpaper-seo-gate { padding:40px; border:1px solid var(--line); border-radius:24px; }
+
 /* Mobile inspection scrolls the document, so in-app browser swipe handling
    sees the same scroll position as the user. Keep this mode through rotation. */
 html.inspection-page { overflow-y:auto; scroll-behavior:auto; }

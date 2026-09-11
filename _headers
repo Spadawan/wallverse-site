@@ -7,6 +7,24 @@
 /app-ads.txt
   Content-Type: text/plain; charset=utf-8
 
+/profile/*
+  X-Robots-Tag: noindex, follow
+
+/notifications/*
+  X-Robots-Tag: noindex, follow
+
+/robots.txt
+  Content-Type: text/plain; charset=utf-8
+
+/ads/*
+  X-Robots-Tag: noindex, follow
+
+/tests/*
+  X-Robots-Tag: noindex
+
+/docs/*
+  X-Robots-Tag: noindex
+
 # Local scripts and styles use versioned URLs whenever they change.
 /styles.css
   Cache-Control: public, max-age=31536000, immutable

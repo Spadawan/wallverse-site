@@ -4,14 +4,18 @@
   const helpers = () => window.WallverseCards || {};
   const inspection = () => window.WallverseInspection;
 
+  const directWallpaper = /^\/wallpaper\//.test(window.location.pathname);
+  const homeTitle = 'Smartphone & Android Wallpapers | Wallverse';
+  const homeDescription = 'Discover smartphone and Android wallpapers on Wallverse. Explore anime, gaming, nature and space backgrounds, find your style and view HD download options.';
   const defaultSeo = {
-    title: document.title,
-    description: document.querySelector('meta[name="description"]')?.content || '',
-    canonical: document.querySelector('link[rel="canonical"]')?.href || `${window.location.origin}/`,
-    ogTitle: document.querySelector('meta[property="og:title"]')?.content || '',
-    ogDescription: document.querySelector('meta[property="og:description"]')?.content || '',
-    ogImage: document.querySelector('meta[property="og:image"]')?.content || '',
-    ogUrl: document.querySelector('meta[property="og:url"]')?.content || '',
+    title: directWallpaper ? homeTitle : document.title,
+    description: directWallpaper ? homeDescription : document.querySelector('meta[name="description"]')?.content || '',
+    canonical: directWallpaper ? `${window.location.origin}/` : document.querySelector('link[rel="canonical"]')?.href || window.location.href,
+    ogTitle: directWallpaper ? homeTitle : document.querySelector('meta[property="og:title"]')?.content || document.title,
+    ogDescription: directWallpaper ? homeDescription : document.querySelector('meta[property="og:description"]')?.content || '',
+    ogImage: directWallpaper ? `${window.location.origin}/assets/app-showcase.webp` : document.querySelector('meta[property="og:image"]')?.content || '',
+    ogUrl: directWallpaper ? `${window.location.origin}/` : document.querySelector('meta[property="og:url"]')?.content || window.location.href,
+    robots: directWallpaper ? 'index,follow,max-image-preview:large' : document.querySelector('meta[name="robots"]')?.content || 'index,follow,max-image-preview:large',
   };
   let ignoreInspectionClose = false;
   let routeNotFound;
@@ -19,7 +23,7 @@
 
   function isWallpaperRoute() { return /^\/wallpaper\/[^/]+\/?$/.test(window.location.pathname); }
   function wallpaperPath(wallpaper) {
-    const title = String(wallpaper?.title || 'wallpaper').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'wallpaper';
+    const title = String(wallpaper?.title || 'wallpaper').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || 'wallpaper';
     const shortId = String(wallpaper?.id || '').replace(/-/g, '').slice(0, 8);
     return shortId ? `/wallpaper/${title}-${shortId}` : '/';
   }
@@ -52,8 +56,17 @@
     const creator = wallpaper.profiles?.username ? ` by @${wallpaper.profiles.username}` : '';
     const description = wallpaper.description || `Discover ${title}${creator} on Wallverse.`;
     const url = new URL(wallpaperPath(wallpaper), window.location.origin).href;
-    const image = helpers().thumbnailUrl?.(wallpaper) || '';
-    document.title = `${title} Wallpaper | Wallverse`;
+    const image = wallpaper.is_suggestive ? `${window.location.origin}/assets/app-showcase.webp` : helpers().thumbnailUrl?.(wallpaper) || '';
+    document.title = `${title} — Phone Wallpaper | Wallverse`;
+    meta('meta[name="robots"]', { name: 'robots' }, wallpaper.is_suggestive ? 'noindex,follow' : 'index,follow,max-image-preview:large');
+    meta('meta[name="twitter:title"]', { name: 'twitter:title' }, document.title);
+    meta('meta[name="twitter:description"]', { name: 'twitter:description' }, description);
+    meta('meta[name="twitter:image"]', { name: 'twitter:image' }, image);
+    document.getElementById('wallpaper-schema')?.remove();
+    const schema = document.createElement('script');
+    schema.id = 'wallpaper-schema'; schema.type = 'application/ld+json';
+    schema.textContent = JSON.stringify({'@context':'https://schema.org','@type':'WebPage',name:document.title,description,url,...(!wallpaper.is_suggestive && image ? {primaryImageOfPage:{'@type':'ImageObject',contentUrl:image,name:title}} : {})});
+    document.head.append(schema);
     meta('meta[name="description"]', { name: 'description' }, description);
     meta('meta[property="og:title"]', { property: 'og:title' }, document.title);
     meta('meta[property="og:description"]', { property: 'og:description' }, description);
@@ -62,7 +75,14 @@
     canonical(url);
   }
   function restoreSeo() {
+    document.getElementById('wallpaper-schema')?.remove();
+    document.getElementById('wallpaper-seo-content')?.remove();
+    document.querySelector('[data-seo-home]')?.removeAttribute('hidden');
     document.title = defaultSeo.title;
+    meta('meta[name="robots"]', { name: 'robots' }, defaultSeo.robots);
+    meta('meta[name="twitter:title"]', { name: 'twitter:title' }, defaultSeo.ogTitle);
+    meta('meta[name="twitter:description"]', { name: 'twitter:description' }, defaultSeo.ogDescription);
+    meta('meta[name="twitter:image"]', { name: 'twitter:image' }, defaultSeo.ogImage);
     meta('meta[name="description"]', { name: 'description' }, defaultSeo.description);
     meta('meta[property="og:title"]', { property: 'og:title' }, defaultSeo.ogTitle);
     meta('meta[property="og:description"]', { property: 'og:description' }, defaultSeo.ogDescription);
@@ -89,6 +109,8 @@
   function present(wallpaper) {
     const viewer = inspection();
     if (!viewer?.open) return;
+    document.getElementById('wallpaper-seo-content')?.remove();
+    document.querySelector('[data-seo-home]')?.removeAttribute('hidden');
     hideNotFound();
     const canonicalPath = wallpaperPath(wallpaper);
     if (`${window.location.pathname}${window.location.search}` !== canonicalPath) {
