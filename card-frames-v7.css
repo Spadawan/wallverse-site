@@ -1,4 +1,4 @@
-/* Reliable premium border layers for the two rounded neon store frames. */
+/* Premium store frames shared by the gallery and wallpaper viewer. */
 .frame--neonrounded > .card-frame-skin,
 .frame--neongradient > .card-frame-skin {
   display:block;
@@ -82,4 +82,64 @@
     inset:0 !important;
     border-width:2px;
   }
+}
+
+/* Cyberpunk: light packets follow the chamfered perimeter instead of crossing
+   the image and escaping into the details panel. The card retains its halo;
+   only the decorative layer clips its own paint. */
+.collectible-card.frame--cyberpunk > .card-frame-skin {
+  overflow:clip;
+  transform:none;
+  isolation:isolate;
+  will-change:auto;
+}
+.frame--cyberpunk > .card-frame-skin::before {
+  animation:cyber-border-breathe 4.8s ease-in-out infinite;
+}
+.frame--cyberpunk > .card-frame-skin > .card-frame-skin__tracer {
+  inset:0 auto auto 0;
+  width:7%;
+  max-width:28px;
+  height:3px;
+  border-radius:999px;
+  offset-path:polygon(9% 2%,91% 2%,98% 9%,98% 91%,91% 98%,9% 98%,2% 91%,2% 9%);
+  offset-anchor:center;
+  offset-rotate:auto;
+  transform:none;
+  opacity:1;
+  background:linear-gradient(90deg,transparent,var(--tier) 38%,var(--accent) 70%,#fff 92%);
+  box-shadow:0 0 5px var(--tier),0 0 11px var(--accent);
+  animation:cyber-perimeter-orbit 7s linear infinite;
+}
+.frame--cyberpunk > .card-frame-skin > .card-frame-skin__tracer--2 {
+  animation-delay:-3.5s;
+  animation-direction:normal;
+}
+.frame--cyberpunk > .card-frame-skin > .card-frame-skin__rail {
+  background:linear-gradient(90deg,var(--tier),#eaffff,var(--accent),var(--tier));
+  background-size:240% 100%;
+  animation:cyber-rail-flow 3.6s ease-in-out infinite;
+}
+.frame--cyberpunk > .card-frame-skin > .card-frame-skin__rail--right { animation-delay:-.9s; }
+.frame--cyberpunk > .card-frame-skin > .card-frame-skin__rail--bottom { animation-delay:-1.8s; }
+.frame--cyberpunk > .card-frame-skin > .card-frame-skin__rail--left { animation-delay:-2.7s; }
+.frame--cyberpunk > .card-frame-skin > .card-frame-skin__spark {
+  animation:cyber-corner-charge 3.6s ease-in-out infinite;
+}
+.frame--cyberpunk > .card-frame-skin > .card-frame-skin__spark--2 { animation-delay:-.9s; }
+.frame--cyberpunk > .card-frame-skin > .card-frame-skin__spark--3 { animation-delay:-1.8s; }
+.frame--cyberpunk > .card-frame-skin > .card-frame-skin__spark--4 { animation-delay:-2.7s; }
+.frame--cyberpunk.is-visible .collectible-card__shine {
+  background:linear-gradient(90deg,transparent,rgba(50,229,255,.06),rgba(225,255,255,.3),rgba(155,70,255,.08),transparent);
+  animation:cyber-polish-sweep 7s cubic-bezier(.45,0,.55,1) infinite;
+}
+@keyframes cyber-perimeter-orbit { from { offset-distance:0%; } to { offset-distance:100%; } }
+@keyframes cyber-border-breathe { 0%,100% { opacity:.65; } 50% { opacity:1; } }
+@keyframes cyber-rail-flow {
+  0%,100% { background-position:0% 50%; opacity:.5; }
+  50% { background-position:100% 50%; opacity:1; }
+}
+@keyframes cyber-corner-charge { 0%,100% { opacity:.4; } 45%,60% { opacity:1; } }
+@media (prefers-reduced-motion:reduce) {
+  .frame--cyberpunk > .card-frame-skin::before { animation:none; }
 }
