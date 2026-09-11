@@ -21,6 +21,38 @@
   let routeNotFound;
   let routeAttempt = 0;
 
+  function feedState() {
+    const value = (id) => document.getElementById(id)?.value || '';
+    return {
+      search: value('feed-search'), rarity: value('feed-rarity'), category: value('feed-category'),
+      quality: value('feed-quality'), sort: document.querySelector('.collection-sort__button.is-active')?.id || '',
+      scrollY: window.scrollY,
+    };
+  }
+  function restoreFeedState() {
+    const state = history.state?.wallverseFeedState;
+    if (!state) return;
+    const setValue = (id, value, eventName) => {
+      const field = document.getElementById(id);
+      if (!field || field.value === value) return;
+      field.value = value;
+      field.dispatchEvent(new Event(eventName, { bubbles: true }));
+    };
+    setValue('feed-search', state.search || '', 'input');
+    setValue('feed-rarity', state.rarity || 'all', 'change');
+    setValue('feed-category', state.category || 'all', 'change');
+    setValue('feed-quality', state.quality || 'all', 'change');
+    const sort = document.getElementById(state.sort);
+    if (sort && !sort.classList.contains('is-active')) sort.click();
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => window.scrollTo({ top: Number(state.scrollY) || 0, behavior: 'instant' })));
+  }
+  function revealHome() {
+    const home = document.querySelector('#main-content[data-seo-home]');
+    if (!home) return;
+    home.removeAttribute('hidden');
+    home.removeAttribute('data-seo-home');
+  }
+
   function isWallpaperRoute() { return /^\/wallpaper\/[^/]+\/?$/.test(window.location.pathname); }
   function wallpaperPath(wallpaper) {
     const title = String(wallpaper?.title || 'wallpaper').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || 'wallpaper';
@@ -77,7 +109,7 @@
   function restoreSeo() {
     document.getElementById('wallpaper-schema')?.remove();
     document.getElementById('wallpaper-seo-content')?.remove();
-    document.querySelector('[data-seo-home]')?.removeAttribute('hidden');
+    revealHome();
     document.title = defaultSeo.title;
     meta('meta[name="robots"]', { name: 'robots' }, defaultSeo.robots);
     meta('meta[name="twitter:title"]', { name: 'twitter:title' }, defaultSeo.ogTitle);
@@ -117,7 +149,6 @@
       if (description) wallpaper = { ...wallpaper, description };
     }
     document.getElementById('wallpaper-seo-content')?.remove();
-    document.querySelector('[data-seo-home]')?.removeAttribute('hidden');
     hideNotFound();
     const canonicalPath = wallpaperPath(wallpaper);
     if (`${window.location.pathname}${window.location.search}` !== canonicalPath) {
@@ -128,7 +159,7 @@
   }
   async function openCurrentRoute() {
     const attempt = ++routeAttempt;
-    if (!isWallpaperRoute()) { hideNotFound(); restoreSeo(); closeForHistory(); return; }
+    if (!isWallpaperRoute()) { hideNotFound(); restoreSeo(); closeForHistory(); restoreFeedState(); return; }
     const wallpaper = findWallpaper();
     if (wallpaper) { present(wallpaper); return; }
     if (!Array.isArray(window.WallversePublicCatalog)) return;
@@ -153,7 +184,10 @@
   }
   function navigate(wallpaper) {
     const target = wallpaperPath(wallpaper);
-    if (`${window.location.pathname}${window.location.search}` !== target) history.pushState({ wallverseWallpaper: true, wallpaperId: wallpaper.id }, '', target);
+    if (`${window.location.pathname}${window.location.search}` !== target) {
+      history.replaceState({ ...(history.state || {}), wallverseFeedState: feedState() }, '', window.location.href);
+      history.pushState({ wallverseWallpaper: true, wallpaperId: wallpaper.id }, '', target);
+    }
     present(wallpaper);
   }
   function onInspectionClosed() {
