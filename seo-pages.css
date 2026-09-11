@@ -29,8 +29,7 @@
 .seo-catalog > .wallpaper:focus-visible .seo-wallpaper-card { box-shadow: 0 0 0 3px #050812, 0 0 0 5px var(--cyan), 0 28px 58px rgba(0, 0, 0, .5); }
 .seo-wallpaper-card .collectible-card__info { gap: 9px; }
 .seo-wallpaper-card .collectible-card__info h2 { overflow: hidden; color: #fff; font-size: clamp(.9rem, 1.35vw, 1.08rem); font-weight: 900; line-height: 1.18; letter-spacing: -.025em; text-overflow: ellipsis; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
-.seo-wallpaper-card .collectible-card__info p { display: inline-flex; align-items: center; gap: 5px; color: #d4deeb; font-size: .67rem; font-weight: 800; }
-.seo-wallpaper-card .collectible-card__info p span { color: var(--cyan); font-size: 1rem; }
+.seo-wallpaper-card .collectible-card__stats { gap: 8px; font-size: .66rem; }
 .seo-empty { grid-column: 1 / -1; padding: 40px; border: 1px solid var(--seo-card-line); border-radius: 24px; color: var(--muted); background: var(--surface); text-align: center; }
 .seo-pagination { display: flex; justify-content: center; gap: 14px; margin-top: 44px; }
 .seo-pagination a { gap: 7px; min-width: 150px; }
