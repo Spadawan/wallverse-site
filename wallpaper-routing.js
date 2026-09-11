@@ -91,6 +91,9 @@
     canonical(defaultSeo.canonical);
   }
   function hideNotFound() { routeNotFound?.remove(); routeNotFound = null; }
+  function serverDescription() {
+    return document.querySelector('#wallpaper-seo-content .wallpaper-seo-description')?.textContent?.trim() || '';
+  }
   function showNotFound() {
     hideNotFound();
     routeNotFound = document.createElement('aside');
@@ -109,6 +112,10 @@
   function present(wallpaper) {
     const viewer = inspection();
     if (!viewer?.open) return;
+    if (!String(wallpaper.description || '').trim()) {
+      const description = serverDescription();
+      if (description) wallpaper = { ...wallpaper, description };
+    }
     document.getElementById('wallpaper-seo-content')?.remove();
     document.querySelector('[data-seo-home]')?.removeAttribute('hidden');
     hideNotFound();
